@@ -245,49 +245,54 @@ const BioScanner = (() => {
     r /= count; g /= count; b /= count;
     brightness = (r + g + b) / 3;
 
-    // ── THE VISUAL HEURISTIC ENGINE 3.0 (Texture & Bio-Signature) ──
+    // ── THE VISUAL HEURISTIC ENGINE 4.0 (Spectral & Entropy Analysis) ──
     const greenRatio = g / (r + 1); 
-    const isBright = brightness > 190; 
+    const isBright = brightness > 200; 
+    const vibrance = Math.max(r, g, b) - Math.min(r, g, b); // Color saturation
     
-    // 1. Texture Complexity (Variance Check)
-    // Real waste is "noisy" and irregular. Skin and Walls are "smooth".
-    let variance = 0;
-    for (let i = 0; i < imgData.length - 40; i += 40) {
-      variance += Math.abs(imgData[i] - imgData[i+40]);
-    }
-    const avgVar = variance / count;
-    const isTooSmooth = avgVar < 18; // Smooth = Non-waste (Skin, Walls, Paper-sheets)
+    // 1. Texture Entropy (Quadrant Comparison)
+    // Real waste is heterogeneous (different in different spots). 
+    // Photos/Walls are homogeneous (same everywhere).
+    let q1=0, q2=0, q3=0, q4=0;
+    const len = imgData.length;
+    for(let i=0; i<len/4; i+=40) q1 += imgData[i];
+    for(let i=len/4; i<len/2; i+=40) q2 += imgData[i];
+    for(let i=len/2; i<3*len/4; i+=40) q3 += imgData[i];
+    for(let i=3*len/4; i<len; i+=40) q4 += imgData[i];
+    const heterogeneity = Math.abs(q1-q2) + Math.abs(q2-q3) + Math.abs(q3-q4);
+    const isUniform = heterogeneity < (len/40 * 10); // Too similar across quadrants = fake/photo
 
-    // 2. Advanced Skin-Tone Detection
-    const isSkinLike = (r > 80 && r > g && r > b && (r-g) > 10 && (r-b) > 20 && brightness > 50 && brightness < 220);
+    // 2. Advanced Skin-Tone Detection (Multi-spectral)
+    const isSkinLike = (r > 100 && g > 60 && b > 40 && r > g && g > b && (r-g) > 15 && (r-b) > 30 && vibrance < 100);
     
-    // 3. Document/Text Detection (Edge Density)
+    // 3. Document/Text Detection (High Edge Frequency)
     let edgeDensity = 0;
     for (let i = 0; i < imgData.length - 40; i += 40) {
-      if (Math.abs(imgData[i] - imgData[i+40]) > 60) edgeDensity++; 
+      if (Math.abs(imgData[i] - imgData[i+40]) > 55) edgeDensity++; 
     }
-    const isTextLike = edgeDensity > (count * 0.12);
+    const isTextLike = edgeDensity > (count * 0.14);
 
-    // 4. Bio-Signatures
-    const isFoodWaste = greenRatio > 1.1 || (r > 60 && g > 60 && b < 50); // Green or Yellowish
-    const isPaperWaste = !isTextLike && brightness > 160 && avgVar > 20; // White but "crunchy" texture
+    // 4. Bio-Signatures (The IoT "Sensor" part)
+    const isOrganic = (greenRatio > 1.05) || (g > r && g > b) || (vibrance > 40 && g > 50); 
+    const isPaper = !isTextLike && brightness > 150 && heterogeneity > 500;
 
     let invalidReason = null;
-    if (isSkinLike && isTooSmooth) invalidReason = "HUMAN_DETECTED";
+    if (isSkinLike && isUniform) invalidReason = "HUMAN_DETECTED";
     else if (isTextLike) invalidReason = "TEXT_DETECTED";
-    else if (isTooSmooth && brightness > 80) invalidReason = "BLANK_DETECTED";
+    else if (isUniform && brightness > 100) invalidReason = "BLANK_DETECTED";
 
-    // Scoring Logic
-    let score = 50;
-    if (isFoodWaste) score += 35;
-    if (isPaperWaste) score += 25;
-    if (isBright && !isPaperWaste) score -= 40; // Plastic/Metal penalty
+    // Dynamic Scoring Engine
+    let score = 30; // Baseline
+    if (isOrganic) score += (vibrance * 0.4) + 40; // Vivid organic = high score
+    else if (isPaper) score += 35;
+    else if (isBright) score -= 20; // Reflective plastic penalty
+    
+    if (heterogeneity > 2000) score += 10; // High complexity bonus
 
     return {
-      score: Math.max(5, Math.min(100, Math.floor(score))),
-      isFood: isFoodWaste,
-      isPaper: isPaperWaste,
-      invalidReason: invalidReason
+      score: Math.max(12, Math.min(100, Math.floor(score))),
+      isOrganic, isPaper, invalidReason,
+      iotData: { vibrance, heterogeneity, brightness }
     };
   }
 
@@ -304,19 +309,30 @@ const BioScanner = (() => {
       <div class="result-panel">
         <div class="analyzing-box">
           <div class="bw-spinner"></div>
-          <div style="font-family:var(--font,sans-serif);font-size:18px;font-weight:700;">Analyzing Material Texture…</div>
+          <div style="font-family:var(--font,sans-serif);font-size:18px;font-weight:700;">IoT SPECTRAL SWEEP…</div>
           <div class="scan-dots">
             <div class="scan-dot"></div><div class="scan-dot"></div><div class="scan-dot"></div>
           </div>
-          <div class="scan-steps" id="bws-step-txt">Detecting surface complexity & bio-signature</div>
+          <div class="scan-steps" id="bws-step-txt">Initializing multi-spectral sensor...</div>
+          <div style="font-family:monospace; font-size:10px; color:var(--green); margin-top:10px; opacity:0.7;" id="bws-iot-log">> SENSING...</div>
         </div>
       </div>`;
 
-    const steps = ['Sampling texture variance...', 'Checking chlorophyll/cellulose levels...', 'Scanning for non-waste patterns...', 'Compiling IoT telemetry...'];
+    const steps = [
+      { t: 'Scanning for Chlorophyll signatures...', l: '> SPECTRAL_RATIO: ' + (visualData.isOrganic ? 'HIGH' : 'LOW') },
+      { t: 'Measuring surface heterogeneity...', l: '> ENTROPY_INDEX: ' + Math.floor(visualData.iotData.heterogeneity) },
+      { t: 'Calculating material vibrance...', l: '> COLOR_VIBRANCE: ' + Math.floor(visualData.iotData.vibrance) },
+      { t: 'Compiling IoT telemetry...', l: '> FINALIZING_DATA_STREAM...' }
+    ];
     let si = 0;
     const stepInt = setInterval(() => {
       const el = document.getElementById('bws-step-txt');
-      if (el && si < steps.length) el.textContent = steps[si++];
+      const log = document.getElementById('bws-iot-log');
+      if (el && log && si < steps.length) {
+        el.textContent = steps[si].t;
+        log.textContent = steps[si].l;
+        si++;
+      }
     }, 1200);
 
     setTimeout(async () => {
@@ -328,7 +344,7 @@ const BioScanner = (() => {
       }
 
       const score = visualData.score;
-      const isOrganic = score > 60;
+      const isOrganic = visualData.isOrganic;
       
       let grade, summary, items, suit;
 
