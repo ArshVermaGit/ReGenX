@@ -335,6 +335,24 @@ function executeLogin(acc) {
   
   buildSidebar();
   autoRefreshTimer = setInterval(() => refreshCurrentView(), 15000);
+  startIoTSimulation();
+}
+
+function startIoTSimulation() {
+  setInterval(() => {
+    const bins = DB.get('iot-bins') || [
+      { id: 'bin-1', name: 'Main Kitchen Bin', fill: 12, rate: 0.5, status: 'active' },
+      { id: 'bin-2', name: 'Outdoor Organic Pit', fill: 45, rate: 0.8, status: 'active' }
+    ];
+    
+    bins.forEach(b => {
+      b.fill = Math.min(100, b.fill + (Math.random() * b.rate));
+      if (b.fill > 90) b.alert = true;
+    });
+    
+    DB.set('iot-bins', bins);
+    if (currentView === 'v-pv-dash') refreshCurrentView(false); 
+  }, 10000); 
 }
 
 window.doLogout = function() {
@@ -565,17 +583,8 @@ async function renderProvider(mc, fullRender) {
         <div>
           <h3 class="heading" style="margin-bottom:16px;">Active Dispatches</h3><div id="pv-act"></div>
           
-          <h3 class="heading" style="margin-top:32px; margin-bottom:16px;">IoT Smart Bins (Live)</h3>
-          <div class="glass-card sensor-card" style="margin-bottom:16px; border-color: var(--border);">
-            <div class="between">
-              <div>
-                <div style="font-weight:700; font-size:16px; margin-bottom:4px;">Main Kitchen Bin</div>
-                <div class="badge badge-green">0% Full</div>
-              </div>
-              <div class="gauge-circle" style="border-top-color:var(--green); width:50px; height:50px; font-size:14px; border-width:3px; animation:none;"><span>0%</span></div>
-            </div>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Bin is empty. Awaiting waste accumulation.</p>
-          </div>
+          <h3 class="heading" style="margin-top:32px; margin-bottom:16px;">IoT Smart Bins (Live Telemetry)</h3>
+          <div id="pv-iot-list"></div>
 
           <h3 class="heading" style="margin-top:24px; margin-bottom:16px;">Impact Analytics</h3>
           <div class="glass-card" style="padding:16px;">
@@ -655,6 +664,32 @@ async function renderProvider(mc, fullRender) {
     const pvMyKg = document.getElementById('pv-my-kg');
     if(pvMyKg) pvMyKg.textContent = totalKg + ' kg';
     document.getElementById('pv-act').innerHTML = active.length ? active.map(o=>buildOrderCard(o,'provider')).join('') : '<div class="empty-state"><div class="empty-sub">No active dispatches.</div></div>';
+    
+    // IoT Bins Rendering
+    const bins = DB.get('iot-bins') || [
+      { id: 'bin-1', name: 'Main Kitchen Bin', fill: 12, rate: 0.5, status: 'active' },
+      { id: 'bin-2', name: 'Outdoor Organic Pit', fill: 45, rate: 0.8, status: 'active' }
+    ];
+    const iotHTML = bins.map(b => {
+      const color = b.fill > 85 ? 'var(--red)' : (b.fill > 60 ? 'var(--amber)' : 'var(--green)');
+      return `
+        <div class="glass-card sensor-card" style="margin-bottom:16px; border-color:${b.fill > 85 ? 'var(--red)' : 'var(--border)'};">
+          <div class="between">
+            <div>
+              <div style="font-weight:700; font-size:16px; margin-bottom:4px;">${b.name}</div>
+              <div class="badge" style="background:${color}; color:white;">${Math.round(b.fill)}% Full</div>
+            </div>
+            <div class="gauge-circle" style="border-top-color:${color}; width:50px; height:50px; font-size:14px; border-width:3px; ${b.fill > 85 ? 'animation:pulse 2s infinite;' : ''}">
+              <span>${Math.round(b.fill)}%</span>
+            </div>
+          </div>
+          ${b.fill > 85 ? `<button class="btn btn-primary btn-sm btn-full" style="margin-top:12px; background:var(--red); border:none;" onclick="showView('v-pv-req')">⚠️ CAPACITY REACHED - DISPATCH NOW</button>` : `<p style="font-size:12px; color:var(--text-muted); margin-top:8px;">AI Predicts full in ~${Math.round((100-b.fill)/b.rate)} hours.</p>`}
+        </div>
+      `;
+    }).join('');
+    const iotDiv = document.getElementById('pv-iot-list');
+    if(iotDiv) iotDiv.innerHTML = iotHTML;
+
     if(fullRender) setTimeout(initPvChart, 100);
   }
   
