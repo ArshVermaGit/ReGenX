@@ -864,7 +864,7 @@ window.deleteOrder = function(id) {
 async function renderRider(mc, fullRender) {
   const orders = getAllOrders();
   const myOrders = orders.filter(o => o.riderId === SESSION.id);
-  const active = myOrders.find(o => !['completed','rejected'].includes(o.status));
+  const activeJobs = myOrders.filter(o => !['completed','rejected'].includes(o.status));
   const pending = orders.filter(o => o.status === 'requested');
   const hist = myOrders.filter(o => o.status === 'completed');
   
@@ -875,22 +875,22 @@ async function renderRider(mc, fullRender) {
     if(fullRender) mc.innerHTML = `
       <div class="two-col">
         <div>
-          <h3 class="heading" style="margin-bottom:16px;">Active Route</h3>
+          <h3 class="heading" style="margin-bottom:16px;">Active Tasks ${activeJobs.length > 1 ? `<span class="badge badge-amber" style="margin-left:8px;">Batching Enabled</span>` : ''}</h3>
           <div id="rd-act"></div>
-          ${active ? `<div class="glass-card" style="margin-top:24px;"><h4 style="margin-bottom:16px;">Route Progress</h4><div id="rd-tl" class="timeline"></div></div>` : ''}
+          ${activeJobs.length ? `<div class="glass-card" style="margin-top:24px;"><h4 style="margin-bottom:16px;">Route Progress</h4><div id="rd-tl" class="timeline"></div></div>` : ''}
         </div>
         <div>
-          <h3 class="heading" style="margin-bottom:16px;">Optimal Path Map</h3>
+          <h3 class="heading" style="margin-bottom:16px;">Optimal Batch Map</h3>
           <div id="rider-map"></div>
-          ${active ? `<div class="glass-card" style="margin-top:16px; background:var(--green-light); border-color:var(--green);">
+          ${activeJobs.length ? `<div class="glass-card" style="margin-top:16px; background:var(--green-light); border-color:var(--green);">
             <div class="between">
               <div>
-                <h4 style="color:var(--green-hover); margin-bottom:4px;">Optimal Path Active</h4>
-                <p style="font-size:12px; color:var(--green-hover);">Route optimized for lowest emissions.</p>
+                <h4 style="color:var(--green-hover); margin-bottom:4px;">${activeJobs.length > 1 ? 'AI Batching Optimized' : 'Optimal Path Active'}</h4>
+                <p style="font-size:12px; color:var(--green-hover);">${activeJobs.length > 1 ? 'Combining routes to minimize fuel.' : 'Route optimized for lowest emissions.'}</p>
               </div>
               <div style="text-align:right;">
-                <div style="font-size:20px; font-weight:700; color:var(--green-hover);">~2.4 L</div>
-                <div style="font-size:11px; color:var(--green-hover); text-transform:uppercase; font-weight:600;">Fuel Saved</div>
+                <div style="font-size:20px; font-weight:700; color:var(--green-hover);">~${(activeJobs.length * 2.4).toFixed(1)} L</div>
+                <div style="font-size:11px; color:var(--green-hover); text-transform:uppercase; font-weight:600;">Total Fuel Saved</div>
               </div>
             </div>
           </div>
@@ -923,16 +923,12 @@ async function renderRider(mc, fullRender) {
                <div>⚙️ AI ETA Confidence</div>
                <div style="font-weight:700; color:var(--blue);">94.2%</div>
              </div>
-          </div>` : ''}
-        </div>
-      </div>
-    `;
+    document.getElementById('rd-act').innerHTML = activeJobs.length ? activeJobs.map(o => buildOrderCard(o, 'rider')).join('') : `<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-title">No Active Task</div><div class="empty-sub">Check available jobs to begin a route.</div></div>`;
     
-    document.getElementById('rd-act').innerHTML = active ? buildOrderCard(active, 'rider') : `<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-title">No Active Task</div><div class="empty-sub">Check available jobs to begin a route.</div></div>`;
-    
-    if (active) {
+    if (activeJobs.length) {
+      const active = activeJobs[0]; // Primary task for timeline
       const steps = [
-        {k:'assigned', l:'Route Assigned', d:true},
+        {k:'assigned', l:'Batch Assigned', d:true},
         {k:'en_route', l:'Driving to Provider', d:['en_route','picked_up','at_plant'].includes(active.status)},
         {k:'picked_up', l:'Waste Collected', d:['picked_up','at_plant'].includes(active.status)},
         {k:'at_plant', l:'Arrived at Plant', d:active.status==='at_plant'}
@@ -962,20 +958,24 @@ async function renderRider(mc, fullRender) {
         refreshCurrentView(false); // Update polyline and distance silently
       });
       
-      if(active) {
+      if(activeJobs.length) {
         const pIco = L.divIcon({html:"<div style='width:16px;height:16px;background:var(--amber);border-radius:50%;border:2px solid white;'></div>", className:''});
-        L.marker([active.providerLat, active.providerLng], {icon:pIco}).addTo(rMap).bindPopup("Pickup: "+active.providerOrg);
+        const latlngs = [[SESSION.lat, SESSION.lng]];
         
-        const plant = DB.get('acc:'+active.plantId);
-        if (plant) {
-           const pltIco = L.divIcon({html:"<div style='width:16px;height:16px;background:var(--green);border-radius:50%;border:2px solid white;'></div>", className:''});
-           L.marker([plant.lat, plant.lng], {icon:pltIco}).addTo(rMap).bindPopup("Dropoff: "+plant.org);
-           
-           // Draw Polyline path
-           const latlngs = [[SESSION.lat, SESSION.lng], [active.providerLat, active.providerLng], [plant.lat, plant.lng]];
-           const polyline = L.polyline(latlngs, {color: 'var(--amber)', weight: 4, dashArray: '5,5'}).addTo(rMap);
-           rMap.fitBounds(polyline.getBounds(), {padding:[40,40]});
-        }
+        activeJobs.forEach(job => {
+          L.marker([job.providerLat, job.providerLng], {icon:pIco}).addTo(rMap).bindPopup("Pickup: "+job.providerOrg);
+          latlngs.push([job.providerLat, job.providerLng]);
+          
+          const plant = DB.get('acc:'+job.plantId);
+          if (plant) {
+            const pltIco = L.divIcon({html:"<div style='width:16px;height:16px;background:var(--green);border-radius:50%;border:2px solid white;'></div>", className:''});
+            L.marker([plant.lat, plant.lng], {icon:pltIco}).addTo(rMap).bindPopup("Dropoff: "+plant.org);
+            latlngs.push([plant.lat, plant.lng]);
+          }
+        });
+        
+        const polyline = L.polyline(latlngs, {color: 'var(--amber)', weight: 4, dashArray: '5,5'}).addTo(rMap);
+        rMap.fitBounds(polyline.getBounds(), {padding:[40,40]});
       }
     }, 100);
     
@@ -1008,8 +1008,8 @@ async function renderRider(mc, fullRender) {
 
   if (currentView === 'v-rd-jobs') {
     if(fullRender) mc.innerHTML = `<h3 class="heading" style="margin-bottom:24px;">Available Jobs</h3><div id="rd-jobs-list"></div>`;
-    if(active) {
-       document.getElementById('rd-jobs-list').innerHTML = `<div class="glass-card" style="border-color:var(--amber)"><h4 style="color:var(--amber)">Active Task blocks new jobs</h4><p class="muted">Finish your current route first.</p></div>`;
+    if(activeJobs.length >= 3) {
+       document.getElementById('rd-jobs-list').innerHTML = `<div class="glass-card" style="border-color:var(--amber)"><h4 style="color:var(--amber)">Batch Limit Reached (3 Jobs)</h4><p class="muted">Finish your current routes to accept more.</p></div>`;
     } else {
        document.getElementById('rd-jobs-list').innerHTML = pending.length ? pending.map(o=>buildOrderCard(o,'rider')).join('') : '<div class="empty-state"><div class="empty-sub">No pending requests right now.</div></div>';
     }
