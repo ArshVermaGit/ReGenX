@@ -1,4 +1,4 @@
-# ReGenX Control Room
+# ReGenX 
 
 ReGenX is a web page operations dashboard for smart bio-waste collection. It turns the implementation plan into a working web app with:
 
