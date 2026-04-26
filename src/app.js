@@ -757,6 +757,7 @@ window.openScanner = function() {
 }
 
 window.closeScanner = function() {
+  if (window.BioScanner) BioScanner.stop();
   closeModal();
 }
 

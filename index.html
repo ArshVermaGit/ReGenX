@@ -177,7 +177,7 @@
 
 <!-- Global Components -->
 <div id="toast"></div>
-<div class="modal-overlay" id="modal">
+<div class="modal-overlay" id="modal" onclick="if(event.target === this) closeScanner()">
   <div class="modal-box glass-card" id="modal-box"></div>
 </div>
 
