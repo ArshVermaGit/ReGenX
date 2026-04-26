@@ -294,11 +294,11 @@ window.BioScanner = (function () {
           <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Top Model Predictions</div>
           ${result.allPredictions.map((p, i) => `
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:${i < 2 ? '8px' : '0'};">
-              <div style="font-size:12px; min-width:20px; color:var(--text-muted);">#${i + 1}</div>
+              <div style="font-size:12px; min-width:20px; color:var(--text-muted);">#${i+1}</div>
               <div style="font-size:12px; flex:1; font-weight:500;">${p.className?.split(',')[0] || '—'}</div>
-              <div style="font-size:12px; font-weight:700; color:var(--text-muted);">${Math.round((p.probability || 0) * 100)}%</div>
+              <div style="font-size:12px; font-weight:700; color:var(--text-muted);">${Math.round((p.probability||0)*100)}%</div>
               <div style="width:60px; height:5px; background:var(--border); border-radius:3px; overflow:hidden;">
-                <div style="height:100%; width:${Math.round((p.probability || 0) * 100)}%; background:var(--green); border-radius:3px;"></div>
+                <div style="height:100%; width:${Math.round((p.probability||0)*100)}%; background:var(--green); border-radius:3px;"></div>
               </div>
             </div>
           `).join('')}
