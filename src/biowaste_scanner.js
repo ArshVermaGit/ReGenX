@@ -294,42 +294,65 @@ const BioScanner = (() => {
         if (analyBtn) analyBtn.disabled = false;
     }
 
-    // ── Smart Vision Simulation (Reads Actual Pixels) ────────────────────────
+    // ── Smart Vision Simulation (High-Fidelity Color Analysis) ────────────────
     function __smartSimulation() {
         const canvas = document.getElementById('bws-canvas');
         const ctx = canvas.getContext('2d');
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
         let r = 0, g = 0, b = 0;
-        for (let i = 0; i < pixels.length; i += 40) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; }
+        let v = 0; // Variance
+        for (let i = 0; i < pixels.length; i += 40) { 
+            r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2];
+            v += Math.abs(pixels[i] - pixels[i+1]) + Math.abs(pixels[i+1] - pixels[i+2]);
+        }
         const count = pixels.length / 40;
-        r /= count; g /= count; b /= count;
+        r /= count; g /= count; b /= count; v /= count;
 
-        const isOrganic = (g > r + 10 && g > b) || (r > 120 && g > 110 && b < 80); // Green/Brown/Yellow
-        const isPlastic = (b > r + 10) || (r > 210 && g > 210 && b > 210); // Blue or White
+        // ORGANIC: Greenish, Earthy Brown, Dull Yellow, or Muted Reds
+        const isGreen = (g > r + 5 && g > b);
+        const isBrown = (r > g && g > b && r < 180 && g > 60); // Earthy tones
+        const isYellow = (r > 130 && g > 130 && b < 100); // Fruit/Peels
+        
+        // INORGANIC: Very Blue, Very Bright White, or High Saturated Artificial Colors
+        const isBlue = (b > r + 15 && b > g);
+        const isWhite = (r > 200 && g > 200 && b > 200);
+        const isArtificial = (v > 60); // High color variance often means packaging
 
         let detectedItems = [];
         let score = 95;
 
-        if (isOrganic) {
-            detectedItems = [{ name: 'Organic Waste', category: 'Organic', isContaminant: false, emoji: '🍃' }];
-            if (isPlastic) { detectedItems.push({ name: 'Plastic Pouch', category: 'Plastic', isContaminant: true, emoji: '🥤' }); score = 65; }
-        } else if (isPlastic) {
-            detectedItems = [{ name: 'Plastic Bottle', category: 'Plastic', isContaminant: true, emoji: '🥤' }, { name: 'Packaging', category: 'Mixed', isContaminant: true, emoji: '📦' }];
-            score = 40;
+        if (isGreen || isBrown || isYellow) {
+            const organicName = isGreen ? 'Leafy Greens' : isBrown ? 'Compostable Organic' : 'Fruit & Veg Scraps';
+            detectedItems = [{ name: organicName, category: 'Organic', isContaminant: false, emoji: '🍃' }];
+            
+            // If it's organic but also shows artificial/bright signs, add a contaminant
+            if (isBlue || isWhite || isArtificial) { 
+                detectedItems.push({ name: 'Plastic Fragment', category: 'Plastic', isContaminant: true, emoji: '🥤' }); 
+                score = 68; 
+            }
+        } else if (isBlue || isWhite || isArtificial) {
+            detectedItems = [
+                { name: isBlue ? 'Plastic Packaging' : 'Synthetic Waste', category: 'Inorganic', isContaminant: true, emoji: '📦' },
+                { name: 'Non-Compostable', category: 'Dry Waste', isContaminant: true, emoji: '🗑️' }
+            ];
+            score = 25;
         } else {
-            detectedItems = [{ name: 'Non-Organic Waste', category: 'Mixed', isContaminant: true, emoji: '🗑️' }];
-            score = 30;
+            // Default to mixed but leaning organic if colors are muted/dark
+            detectedItems = [{ name: 'Mixed Organic Matter', category: 'Organic', isContaminant: false, emoji: '🍂' }];
+            score = 82;
         }
+
+        const grade = score > 90 ? 'Excellent' : score > 75 ? 'Good' : score > 50 ? 'Fair' : 'Poor';
 
         return {
             segregationScore: score,
-            overallGrade: score > 80 ? 'Excellent' : score > 50 ? 'Fair' : 'Poor',
-            gradeSummary: score > 80 ? "Clean organic batch detected." : "High contamination levels detected.",
+            overallGrade: grade,
+            gradeSummary: score > 80 ? "Healthy organic batch identified." : "Contamination detected in organic flow.",
             detectedItems,
-            recommendations: score < 80 ? [{ icon: '🧤', text: 'Remove non-organic items.' }] : [{ icon: '✨', text: 'Batch ready for pick-up.' }],
-            biogasSuitability: score > 75 ? 'Ideal' : 'Reject',
-            estimatedOrganicPercent: score > 80 ? 98 : 45,
+            recommendations: score < 80 ? [{ icon: '🧤', text: 'Please remove synthetics before disposal.' }] : [{ icon: '✨', text: 'Perfectly sorted. Keep it up!' }],
+            biogasSuitability: score > 85 ? 'Ideal' : score > 60 ? 'Acceptable' : 'Reject',
+            estimatedOrganicPercent: Math.max(10, score + 5),
             actionRequired: score < 80
         };
     }
