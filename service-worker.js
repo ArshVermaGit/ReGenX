@@ -1,4 +1,4 @@
-const CACHE_NAME = 'regenx-v1';
+const CACHE_NAME = 'regenx-v2';
 const ASSETS = [
   'index.html',
   'src/styles.css',
