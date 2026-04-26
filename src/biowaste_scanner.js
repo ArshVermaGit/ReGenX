@@ -483,6 +483,25 @@ ${(r.detectedItems || []).map(i => `
         if (typeof __opts.onApply === 'function') __opts.onApply(score, organicPercent);
     }
 
+    function __toggleSettings() {
+        const panel = document.getElementById('bws-settings');
+        if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function __saveApiKey() {
+        const key = document.getElementById('bws-api-key').value;
+        const prov = document.getElementById('bws-provider-select').value;
+        await __storage.set('settings:api_key', key);
+        await __storage.set('settings:ai_provider', prov);
+        __apiKey = key; __aiProvider = prov;
+        __toast('✓ Settings Saved');
+        __toggleSettings();
+    }
+
+    function __updateProvider(p) {
+        __aiProvider = p;
+    }
+
     async function open(options) {
         __opts = options || {}; await __init(); __render();
     }
