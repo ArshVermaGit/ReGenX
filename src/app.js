@@ -161,7 +161,7 @@ window.doRegister = async function() {
   if(!name || !org) return showToast("⚠ Please enter Name and Organisation.");
   if(!detectedPos) return showToast("⚠ Please detect GPS Location first.");
   
-  const acc = { id: uid(), role: selectedRole, name, org, lat: detectedPos.lat, lng: detectedPos.lng };
+  const acc = { id: uid(), role: selectedRole, name, org, lat: detectedPos.lat, lng: detectedPos.lng, tokens: 0 };
   DB.set('acc:' + acc.id, acc);
   
   // If no plants exist, establish a mock plant nearby to ensure routing works
@@ -198,6 +198,22 @@ window.doLogin = async function() {
   executeLogin(acc);
 }
 
+let tickerTimer = null;
+function startTicker() {
+  const t = document.getElementById('global-ticker');
+  if(!t) return;
+  const msgs = [
+    "AI Route Optimization Active. Saving 12% Fuel Fleet-wide.",
+    "Plant Alpha just minted 250 $RGX for organic compost yield.",
+    "Over 5,000kg of biowaste diverted from landfills today.",
+    "Rider GN-Tempo-1 completing Route #A1B2... ETA 5 mins."
+  ];
+  let i = 0;
+  t.textContent = msgs[i];
+  if(tickerTimer) clearInterval(tickerTimer);
+  tickerTimer = setInterval(() => { i = (i+1)%msgs.length; t.textContent = msgs[i]; }, 20000);
+}
+
 function executeLogin(acc) {
   SESSION = acc;
   document.getElementById('login-screen').style.display = 'none';
@@ -206,6 +222,15 @@ function executeLogin(acc) {
   document.getElementById('tb-name').textContent = acc.name;
   document.getElementById('tb-role').textContent = `${acc.role.toUpperCase()} · ${acc.org}`;
   document.getElementById('tb-avatar').textContent = acc.name.slice(0,2).toUpperCase();
+  
+  const tokenContainer = document.getElementById('token-balance-container');
+  if (acc.role === 'provider') {
+    tokenContainer.classList.remove('hidden');
+    document.getElementById('token-balance').textContent = acc.tokens || 0;
+  } else {
+    tokenContainer.classList.add('hidden');
+  }
+  startTicker();
   
   buildSidebar();
   autoRefreshTimer = setInterval(() => refreshCurrentView(), 15000);
@@ -313,6 +338,7 @@ function buildOrderCard(o, role) {
         <div class="oc-meta-item">⚗️ Dest: ${o.plantName}</div>
       </div>
       ${o.actualKg ? `<div style="margin-bottom:8px;font-size:13px;color:var(--green);font-weight:600;">✓ Actual Collected: ${o.actualKg}kg (Quality: ${o.quality})</div>` : ''}
+      ${o.tokensMinted ? `<div style="margin-bottom:8px;font-size:13px;color:var(--amber);font-weight:600;">🪙 Minted ${o.tokensMinted} $RGX <span style="font-size:10px; color:var(--text-muted); font-family:monospace; margin-left:8px;">TX: ${o.txHash.slice(0,12)}...</span></div>` : ''}
       ${acts ? `<div class="oc-actions">${acts}</div>` : ''}
     </div>
   `;
@@ -336,7 +362,22 @@ async function renderProvider(mc, fullRender) {
     if(fullRender) mc.innerHTML = `
       <div class="stats-grid" id="pv-stats"></div>
       <div class="two-col">
-        <div><h3 class="heading" style="margin-bottom:16px;">Active Dispatches</h3><div id="pv-act"></div></div>
+        <div>
+          <h3 class="heading" style="margin-bottom:16px;">Active Dispatches</h3><div id="pv-act"></div>
+          
+          <h3 class="heading" style="margin-top:32px; margin-bottom:16px;">IoT Smart Bins (Live)</h3>
+          <div class="glass-card sensor-card" style="margin-bottom:16px; border-color: var(--green);">
+            <div class="between">
+              <div>
+                <div style="font-weight:700; font-size:16px; margin-bottom:4px;">Main Kitchen Bin</div>
+                <div class="badge badge-amber" style="animation: pulse 1.5s infinite">85% Full</div>
+              </div>
+              <div class="gauge-circle" style="border-top-color:var(--amber); width:50px; height:50px; font-size:14px; border-width:3px;"><span>85%</span></div>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Threshold reached. Auto-dispatch suggested.</p>
+            <button class="btn btn-sm btn-amber" style="margin-top:12px;" onclick="showView('v-pv-req')">1-Click Dispatch</button>
+          </div>
+        </div>
         <div>
           <div class="glass-card" style="background:var(--green-light); border-color:var(--green);">
             <div style="font-size:32px;margin-bottom:12px;">♻️</div>
@@ -344,6 +385,13 @@ async function renderProvider(mc, fullRender) {
             <p style="font-size:14px;color:var(--green-hover);opacity:0.8;margin-bottom:20px;">Ensure you meet the 50kg minimum threshold for net-positive energy yield.</p>
             <button class="btn btn-primary" onclick="showView('v-pv-req')">Create Request →</button>
           </div>
+
+          <div class="glass-card sensor-card" style="margin-top:24px; padding:16px;">
+            <div class="ai-badge">✨ AI Predicts</div>
+            <h4 style="margin-bottom:4px;">120kg Expected Tomorrow</h4>
+            <p style="font-size:13px; color:var(--text-muted);">Based on historical weekend trends and current hostel occupancy. Consider booking an early shift.</p>
+          </div>
+
           <h3 class="heading" style="margin-top:24px; margin-bottom:16px;">Regional Leaderboard</h3>
           <div class="glass-card" style="padding:16px;">
             <div class="between" style="padding:8px 0; border-bottom:1px solid var(--border);">
@@ -473,6 +521,21 @@ async function renderRider(mc, fullRender) {
                 <div style="font-size:11px; color:var(--green-hover); text-transform:uppercase; font-weight:600;">Fuel Saved</div>
               </div>
             </div>
+          </div>
+          <div class="glass-card sensor-card" style="margin-top:16px; padding:16px; border-color:var(--blue);">
+             <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase;">Vehicle Telemetry (Live)</div>
+             <div class="between" style="margin-bottom:8px;">
+               <div>🔋 Battery Level</div>
+               <div style="font-weight:700; color:var(--green);">78%</div>
+             </div>
+             <div class="between" style="margin-bottom:8px;">
+               <div>🌡️ Cargo Temp</div>
+               <div style="font-weight:700;">14°C</div>
+             </div>
+             <div class="between">
+               <div>⚙️ AI ETA Confidence</div>
+               <div style="font-weight:700; color:var(--blue);">94.2%</div>
+             </div>
           </div>` : ''}
         </div>
       </div>
@@ -617,6 +680,26 @@ async function renderPlant(mc, fullRender) {
   if (currentView === 'v-pl-dash') {
     if(fullRender) mc.innerHTML = `
       <div class="stats-grid" id="pl-stats"></div>
+      
+      <h3 class="heading" style="margin-bottom:16px; margin-top:16px;">Live Digester Vitals</h3>
+      <div class="stats-grid" style="margin-bottom:32px;">
+        <div class="glass-card sensor-card" style="text-align:center;">
+           <div class="gauge-circle" style="border-top-color:var(--red);"><span>38°C</span></div>
+           <div style="font-weight:600;">Core Temp</div>
+           <div style="font-size:11px; color:var(--green); margin-top:4px;">Optimal</div>
+        </div>
+        <div class="glass-card sensor-card" style="text-align:center;">
+           <div class="gauge-circle" style="border-top-color:var(--blue);"><span>1.2</span></div>
+           <div style="font-weight:600;">Pressure (atm)</div>
+           <div style="font-size:11px; color:var(--green); margin-top:4px;">Stable</div>
+        </div>
+        <div class="glass-card sensor-card" style="text-align:center;">
+           <div class="gauge-circle" style="border-top-color:var(--amber);"><span>45</span></div>
+           <div style="font-weight:600;">CH₄ Flow (m³/h)</div>
+           <div style="font-size:11px; color:var(--amber); margin-top:4px;">Surging</div>
+        </div>
+      </div>
+
       <div class="two-col">
         <div><h3 class="heading" style="margin-bottom:16px;">Gate Arrivals</h3><div id="pl-inc"></div></div>
         <div><h3 class="heading" style="margin-bottom:16px;">Recent Output</h3><div id="pl-out-logs"></div></div>
@@ -673,8 +756,25 @@ window.openPlantConfirm = function(id) {
 
 window.confirmPlantReceipt = function(id) {
   const o = getOrder(id); if(!o) return;
-  o.status = 'completed'; o.segScore = document.getElementById('p-score').value || 0;
-  saveOrder(o); closeModal(); refreshCurrentView(); showToast("✓ Intake Confirmed.");
+  const score = document.getElementById('p-score').value || 0;
+  o.status = 'completed'; o.segScore = score;
+  
+  const multiplier = score >= 80 ? 1.5 : (score >= 50 ? 1.0 : 0.5);
+  const earnedTokens = Math.round((o.actualKg || o.kg) * 2 * multiplier);
+  o.tokensMinted = earnedTokens;
+  o.txHash = '0x' + uid() + uid() + uid();
+  
+  const providerAcc = DB.get('acc:' + o.providerId);
+  if (providerAcc) {
+     providerAcc.tokens = (providerAcc.tokens || 0) + earnedTokens;
+     DB.set('acc:' + o.providerId, providerAcc);
+     if (SESSION.role === 'provider' && SESSION.id === o.providerId) {
+         SESSION.tokens = providerAcc.tokens;
+         document.getElementById('token-balance').textContent = SESSION.tokens;
+     }
+  }
+
+  saveOrder(o); closeModal(); refreshCurrentView(); showToast(`✓ Intake Confirmed. Minted ${earnedTokens} $RGX for provider!`);
 }
 
 window.savePlantLog = function() {
