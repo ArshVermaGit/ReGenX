@@ -252,7 +252,8 @@ tr:hover td { background: var(--bg); }
   opacity: 0; pointer-events: none; transition: 0.3s; padding: 20px;
 }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
-.modal-box { width: 100%; max-width: 480px; transform: scale(0.95); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.modal-box { width: 100%; max-width: 540px; transform: scale(0.95); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
+.modal-box.modal-large { max-width: 800px; }
 .modal-overlay.open .modal-box { transform: scale(1); }
 .modal-title { font-size: 22px; font-weight: 700; font-family: 'Space Grotesk'; margin-bottom: 8px; }
 .modal-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
@@ -448,38 +449,41 @@ tr:hover td { background: var(--bg); }
 }
 
 /* SCANNER STYLES */
-.scanner-shell { max-width: 680px; margin: 0 auto; }
-.scanner-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.scanner-back { font-size: 13px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.scanner-shell { width: 100%; max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; }
+.scanner-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 4px; }
+.scanner-back { font-size: 13px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; background: var(--surface); }
 
-.cam-zone { background: #000; border-radius: 20px; overflow: hidden; position: relative; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; border: 2px solid #333; }
+.cam-zone { background: #000; border-radius: 24px; overflow: hidden; position: relative; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); box-shadow: var(--shadow-lg); width: 100%; }
 #bws-video { width: 100%; height: 100%; object-fit: cover; }
-#bws-preview { width: 100%; border-radius: 20px; border: 2px solid var(--green); display: none; object-fit: cover; }
+#bws-preview { width: 100%; border-radius: 24px; border: 2px solid var(--green); display: none; object-fit: cover; }
 
 .cam-overlay { position: absolute; inset: 0; pointer-events: none; }
-.cam-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; aspect-ratio: 1; }
-.cam-corner { position: absolute; width: 24px; height: 24px; border-color: var(--green); border-style: solid; }
-.cam-corner-tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-.cam-corner-tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-.cam-corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-.cam-corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
-.cam-scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); animation: bw-scanline 2s ease-in-out infinite; top: 0; }
-@keyframes bw-scanline { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+.cam-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; aspect-ratio: 1; }
+.cam-corner { position: absolute; width: 30px; height: 30px; border-color: var(--green); border-style: solid; filter: drop-shadow(0 0 5px var(--green)); }
+.cam-corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-radius: 8px 0 0 0; }
+.cam-corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-radius: 0 8px 0 0; }
+.cam-corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-radius: 0 0 0 8px; }
+.cam-corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-radius: 0 0 8px 0; }
+.cam-scan-line { position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--green), transparent); box-shadow: 0 0 15px var(--green); animation: bw-scanline 2.5s ease-in-out infinite; top: 0; }
 
-.cam-placeholder { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #666; padding: 40px; text-align: center; }
-.cam-placeholder-icon { font-size: 56px; opacity: .5; }
+.cam-placeholder { display: flex; flex-direction: column; align-items: center; gap: 16px; color: var(--text-muted); padding: 40px; text-align: center; }
+.cam-placeholder-icon { font-size: 64px; opacity: .3; }
 
-.cam-mode-row { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; }
-.cam-mode-btn { padding: 8px 20px; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text-muted); cursor: pointer; }
-.cam-mode-btn.on { background: var(--green); color: #fff; border-color: var(--green); }
+.cam-mode-row { display: flex; gap: 8px; margin-bottom: 24px; justify-content: center; background: var(--border); padding: 4px; border-radius: 100px; width: fit-content; margin-left: auto; margin-right: auto; }
+.cam-mode-btn { padding: 8px 24px; border-radius: 100px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+.cam-mode-btn.on { background: var(--surface); color: var(--green); box-shadow: var(--shadow-sm); }
 
-.cam-controls { display: flex; gap: 12px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+.cam-controls { display: flex; gap: 12px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
 
-.bw-spinner { width: 52px; height: 52px; border-radius: 50%; border: 4px solid var(--green-light); border-top-color: var(--green); animation: bw-spin .8s linear infinite; }
-@keyframes bw-spin { to { transform: rotate(360deg); } }
+.result-panel { margin-top: 24px; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-lg); animation: slideUp 0.4s ease-out; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-.progress-track { height: 8px; background: var(--border); border-radius: 4px; }
-.progress-fill { height: 100%; border-radius: 4px; transition: width .5s; }
+@media (max-width: 600px) {
+  .modal-box { padding: 16px; max-height: 95vh; }
+  .cam-zone { aspect-ratio: 1; } /* Squarer for mobile camera */
+  .cam-frame { width: 85%; }
+  .scanner-header h3 { font-size: 18px; }
+}
 
 .mobile-tabs { display: none; }
 .hamburger { display: none; }

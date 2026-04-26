@@ -734,6 +734,9 @@ async function renderProvider(mc, fullRender) {
 }
 
 window.openScanner = function() {
+  const mb = document.getElementById('modal-box');
+  if(mb) mb.classList.add('modal-large');
+  
   BioScanner.open({
     containerId: 'modal-box',
     role: SESSION.role,
@@ -758,6 +761,8 @@ window.openScanner = function() {
 
 window.closeScanner = function() {
   if (window.BioScanner) BioScanner.stop();
+  const mb = document.getElementById('modal-box');
+  if(mb) mb.classList.remove('modal-large');
   closeModal();
 }
 
