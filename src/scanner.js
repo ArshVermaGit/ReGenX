@@ -1,16 +1,17 @@
 /**
  * ========================================================================================================================
  * BioWaste — AI Waste Scanner Module
- * File: scanner.js (High-Fidelity Integrated Version)
+ * File: scanner.js (AI-Powered Vision Version)
  * ========================================================================================================================
  */
 
 const BioScanner = (() => {
 
   // ── Internal state ─────────────────────────────────────────────────────────
-  let __stream = null;   // MediaStream from getUserMedia
-  let __imageB64 = null;   // Current captured image as base64
-  let __opts = {};     // Options passed to open()
+  let __stream = null;   
+  let __imageB64 = null;   
+  let __opts = {};     
+  let __apiKey = '';     // User's Anthropic API Key
 
   // ── Storage helpers ────────────────────────────────────────────────────────
   const __storage = {
@@ -35,33 +36,11 @@ const BioScanner = (() => {
         return true;
       }
       catch { return false; }
-    },
-    async list(prefix) {
-      try { 
-        if (typeof window.storage !== 'undefined' && window.storage.list) {
-          const r = await window.storage.list(prefix, true); 
-          return r ? r.keys : []; 
-        }
-        const keys = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k.startsWith('regenx:' + prefix)) keys.push(k.replace('regenx:', ''));
-        }
-        return keys;
-      }
-      catch { return []; }
     }
   };
 
   function __uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function __ts() { return Date.now(); }
-  function __ago(ms) {
-    const d = Date.now() - ms;
-    if (d < 60000) return 'just now';
-    if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
-    if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
-    return Math.floor(d / 86400000) + 'd ago';
-  }
 
   function __toast(msg) {
     if (typeof showToast === 'function') showToast(msg);
@@ -72,12 +51,17 @@ const BioScanner = (() => {
     if (__stream) { __stream.getTracks().forEach(t => t.stop()); __stream = null; }
   }
 
+  // ── Initialization & Key Loading ───────────────────────────────────────────
+  async function __init() {
+    const saved = await __storage.get('settings:api_key');
+    if (saved) __apiKey = saved;
+  }
+
   function __render() {
     const container = document.getElementById(__opts.containerId || 'scanner-view');
     if (!container) { 
       const modalBox = document.getElementById('modal-box');
       if (modalBox) { __opts.containerId = 'modal-box'; __render(); return; }
-      console.error('[BioScanner] Container not found:', __opts.containerId); 
       return; 
     }
 
@@ -85,48 +69,87 @@ const BioScanner = (() => {
       <div class="scanner-shell">
         <div class="scanner-header">
           <button class="scanner-back" onclick="BioScanner.__back()">← Back</button>
-          <div style="font-family:var(--font,sans-serif);font-size:20px;font-weight:800;">📷 Waste Scanner</div>
-          <div style="font-size:11px;color:var(--muted,#888);font-family:var(--mono,monospace);">AI · Visual analysis</div>
+          <div style="flex:1; text-align:center;">
+            <div style="font-family:var(--font,sans-serif);font-size:18px;font-weight:800;">📷 AI Waste Scanner</div>
+            <div style="font-size:10px;color:var(--muted,#888);text-transform:uppercase;letter-spacing:1px;">Powered by Claude 3 Vision</div>
+          </div>
+          <button class="scanner-settings-btn" onclick="BioScanner.__toggleSettings()" title="API Settings">⚙️</button>
         </div>
 
-        <div style="background:var(--green-light,#E1F5EE);border:1px solid #b0e4cf;border-radius:12px;padding:13px 16px;margin-bottom:16px;font-size:13px;color:var(--green-dark,#0F6E56);line-height:1.5;">
-          <strong>How to use:</strong> Point your camera at the waste bin. 
-          The AI identifies items and calculates a <strong>segregation score</strong>.
+        <!-- API Settings Panel (Hidden by default) -->
+        <div id="bws-settings" class="scanner-settings-panel" style="display:none;">
+          <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Anthropic API Settings</div>
+          <p style="font-size:11px; color:var(--text-muted); margin-bottom:12px;">Enter your API key to enable real AI visual analysis. If empty, the scanner runs in <strong>Demo Mode</strong>.</p>
+          <div class="form-group">
+            <input type="password" id="bws-api-key-input" class="form-input" placeholder="sk-ant-api..." value="${__apiKey}">
+          </div>
+          <button class="btn btn-primary btn-sm btn-full" onclick="BioScanner.__saveApiKey()">Save API Key</button>
         </div>
 
-        <div class="cam-mode-row">
-          <button class="cam-mode-btn on" id="bws-mode-cam"    onclick="BioScanner.__setMode('camera')">📷 Camera</button>
-          <button class="cam-mode-btn"    id="bws-mode-upload" onclick="BioScanner.__setMode('upload')">🖼 Upload</button>
-        </div>
+        <div id="bws-main-view">
+          <div style="background:var(--green-light,#E1F5EE);border:1px solid #b0e4cf;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--green-dark,#0F6E56);line-height:1.4;">
+            ${__apiKey ? '🟢 <strong>AI Active:</strong> Capture an image for real-time contamination analysis.' : '🟡 <strong>Demo Mode:</strong> Enter an API key in settings for real visual analysis.'}
+          </div>
 
-        <div class="cam-zone" id="bws-cam-zone">
-          <video id="bws-video" autoplay muted playsinline></video>
-          <canvas id="bws-canvas" style="display:none;"></canvas>
-          <img id="bws-preview" alt="Captured waste">
-          <div class="cam-overlay">
-            <div class="cam-frame">
-              <div class="cam-corner cam-corner-tl"></div>
-              <div class="cam-corner cam-corner-tr"></div>
-              <div class="cam-corner cam-corner-bl"></div>
-              <div class="cam-corner cam-corner-br"></div>
-              <div class="cam-scan-line" id="bws-scan-line" style="display:none;"></div>
+          <div class="cam-mode-row">
+            <button class="cam-mode-btn on" id="bws-mode-cam"    onclick="BioScanner.__setMode('camera')">📷 Camera</button>
+            <button class="cam-mode-btn"    id="bws-mode-upload" onclick="BioScanner.__setMode('upload')">🖼 Upload</button>
+          </div>
+
+          <div class="cam-zone" id="bws-cam-zone">
+            <video id="bws-video" autoplay muted playsinline></video>
+            <canvas id="bws-canvas" style="display:none;"></canvas>
+            <img id="bws-preview" alt="Captured waste">
+            <div class="cam-overlay">
+              <div class="cam-frame">
+                <div class="cam-corner cam-corner-tl"></div>
+                <div class="cam-corner cam-corner-tr"></div>
+                <div class="cam-corner cam-corner-bl"></div>
+                <div class="cam-corner cam-corner-br"></div>
+                <div class="cam-scan-line" id="bws-scan-line" style="display:none;"></div>
+              </div>
+            </div>
+            <div class="cam-placeholder" id="bws-placeholder">
+              <div class="cam-placeholder-icon">📷</div>
+              <div class="cam-placeholder-text">Press <strong>Start Camera</strong> to begin</div>
             </div>
           </div>
-          <div class="cam-placeholder" id="bws-placeholder">
-            <div class="cam-placeholder-icon">📷</div>
-            <div class="cam-placeholder-text">Press <strong>Start Camera</strong> to begin</div>
-          </div>
-        </div>
 
-        <div class="cam-controls" id="bws-controls">
-          <button class="cam-btn btn-secondary" style="border-radius:10px;" onclick="BioScanner.__clickUpload()">🖼 Upload photo</button>
-          <button class="cam-btn btn-primary" id="bws-btn-main" style="border-radius:10px; min-width:180px;" onclick="BioScanner.__startCamera()">📷 Start camera</button>
+          <div class="cam-controls" id="bws-controls">
+            <button class="cam-btn btn-secondary" style="border-radius:10px;" onclick="BioScanner.__clickUpload()">🖼 Upload</button>
+            <button class="cam-btn btn-primary" id="bws-btn-main" style="border-radius:10px; min-width:180px;" onclick="BioScanner.__startCamera()">📷 Start camera</button>
+          </div>
         </div>
 
         <div id="bws-result"></div>
       </div>`;
   }
 
+  // ── API Key Management ─────────────────────────────────────────────────────
+  function __toggleSettings() {
+    const s = document.getElementById('bws-settings');
+    const m = document.getElementById('bws-main-view');
+    if (s.style.display === 'none') {
+      s.style.display = 'block';
+      m.style.opacity = '0.3';
+      m.style.pointerEvents = 'none';
+    } else {
+      s.style.display = 'none';
+      m.style.opacity = '1';
+      m.style.pointerEvents = 'auto';
+    }
+  }
+
+  async function __saveApiKey() {
+    const val = document.getElementById('bws-api-key-input').value.trim();
+    __apiKey = val;
+    await __storage.set('settings:api_key', val);
+    __toast(val ? '✓ API Key Saved' : '✓ Switched to Demo Mode');
+    __toggleSettings();
+    __render();
+  }
+
+  // ── Camera & Capture ───────────────────────────────────────────────────────
   function __setMode(mode) {
     document.getElementById('bws-mode-cam')?.classList.toggle('on', mode === 'camera');
     document.getElementById('bws-mode-upload')?.classList.toggle('on', mode === 'upload');
@@ -178,35 +201,30 @@ const BioScanner = (() => {
       if (scanLine) scanLine.style.display = 'block';
     } catch (err) {
       if (placeholder) placeholder.innerHTML = `<div class="cam-placeholder-text">Camera error: ${err.message}</div>`;
-      __toast('⚠ Camera blocked — use Upload');
     }
   }
 
   function __captureFrame() {
     const video = document.getElementById('bws-video');
     const canvas = document.getElementById('bws-canvas');
-    const scanLine = document.getElementById('bws-scan-line');
     if (!video || !canvas) return;
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.8);
     __imageB64 = dataURL.split(',')[1];
     __stopCamera();
-    if (scanLine) scanLine.style.display = 'none';
     __showPreview(dataURL);
   }
 
   function __showPreview(dataURL) {
     const preview = document.getElementById('bws-preview');
     const video = document.getElementById('bws-video');
-    const placeholder = document.getElementById('bws-placeholder');
     const mainBtn = document.getElementById('bws-btn-main');
     const controls = document.getElementById('bws-controls');
 
     if (preview) { preview.src = dataURL; preview.style.display = 'block'; }
     if (video) video.style.display = 'none';
-    if (placeholder) placeholder.style.display = 'none';
     if (mainBtn) { mainBtn.textContent = '🔄 Retake'; mainBtn.onclick = () => __retake(); }
 
     if (controls && !document.getElementById('bws-analyse-btn')) {
@@ -215,20 +233,18 @@ const BioScanner = (() => {
       btn.className = 'cam-btn btn-primary';
       btn.style.borderRadius = '10px';
       btn.style.minWidth = '180px';
-      btn.textContent = '🔍 Analyse waste';
+      btn.textContent = '🔍 Run AI Analysis';
       btn.onclick = () => __analyse();
       controls.appendChild(btn);
     }
   }
 
   function __retake() {
-    __imageB64 = null;
-    __stopCamera();
+    __imageB64 = null; __stopCamera();
     const preview = document.getElementById('bws-preview');
     const video = document.getElementById('bws-video');
     const mainBtn = document.getElementById('bws-btn-main');
     const analyBtn = document.getElementById('bws-analyse-btn');
-    const placeholder = document.getElementById('bws-placeholder');
     const result = document.getElementById('bws-result');
 
     if (preview) preview.style.display = 'none';
@@ -236,21 +252,14 @@ const BioScanner = (() => {
     if (analyBtn) analyBtn.remove();
     if (result) result.innerHTML = '';
     if (mainBtn) { mainBtn.textContent = '📷 Start camera'; mainBtn.onclick = () => __startCamera(); }
-    if (placeholder) {
-      placeholder.innerHTML = `<div class="cam-placeholder-icon">📷</div><div class="cam-placeholder-text">Press <strong>Start Camera</strong> to begin</div>`;
-      placeholder.style.display = 'flex';
-    }
     __startCamera();
   }
 
-  function __back() {
-    __stopCamera();
-    if (typeof __opts.onBack === 'function') __opts.onBack();
-  }
+  function __back() { __stopCamera(); if (__opts.onBack) __opts.onBack(); }
 
-  // ── CORE ANALYSIS (SIMULATED) ────────────────────────────────────────────
+  // ── CORE ANALYSIS (REAL AI VS SIMULATION) ────────────────────────────────
   async function __analyse() {
-    if (!__imageB64) { __toast('⚠ Capture or upload an image first'); return; }
+    if (!__imageB64) { __toast('⚠ Capture image first'); return; }
 
     const resultArea = document.getElementById('bws-result');
     const analyBtn = document.getElementById('bws-analyse-btn');
@@ -260,58 +269,91 @@ const BioScanner = (() => {
       <div class="result-panel">
         <div class="analysing-box">
           <div class="bw-spinner"></div>
-          <div style="font-family:var(--font,sans-serif);font-size:18px;font-weight:700;">Analysing waste…</div>
-          <div class="scan-dots">
-            <div class="scan-dot"></div><div class="scan-dot"></div><div class="scan-dot"></div>
-          </div>
-          <div class="scan-steps" id="bws-step-txt">Verifying image is waste…</div>
+          <div style="font-family:var(--font,sans-serif);font-size:18px;font-weight:700;">${__apiKey ? 'AI Vision Analysing…' : 'Simulating Analysis…'}</div>
+          <div class="scan-dots"><div class="scan-dot"></div><div class="scan-dot"></div><div class="scan-dot"></div></div>
+          <div class="scan-steps" id="bws-step-txt">Processing image...</div>
         </div>
       </div>`;
 
-    const steps = [
-      'Identifying waste items…',
-      'Checking for contaminants…',
-      'Calculating segregation score…',
-      'Finalizing analysis…'
-    ];
-    let si = 0;
-    const stepInt = setInterval(() => {
-      const el = document.getElementById('bws-step-txt');
-      if (el && si < steps.length) el.textContent = steps[si++];
-    }, 1200);
-
-    setTimeout(async () => {
-      clearInterval(stepInt);
-      if (analyBtn) analyBtn.disabled = false;
-
+    if (__apiKey) {
+      // ── REAL CLAUDE 3 VISION ANALYSIS ─────────────────────────────────────
       try {
-        const result = __simulateAnalysis();
+        const stepTxt = document.getElementById('bws-step-txt');
+        if (stepTxt) stepTxt.textContent = 'Calling Claude 3 Vision API...';
+
+        const prompt = `You are an expert waste segregation inspector. Analyze the provided image of waste.
+        Return ONLY valid JSON with this exact schema:
+        {
+          "segregationScore": <integer 0-100>,
+          "overallGrade": "<Excellent|Good|Fair|Poor>",
+          "gradeSummary": "<one sentence describing what you see>",
+          "detectedItems": [
+            { "name": "<item>", "category": "<Organic|Plastic|Glass|Metal|Paper>", "isContaminant": <bool>, "emoji": "<emoji>" }
+          ],
+          "recommendations": [ { "icon": "<emoji>", "text": "<instruction>" } ],
+          "biogasSuitability": "<Ideal|Acceptable|Marginal|Reject>",
+          "estimatedOrganicPercent": <integer 0-100>,
+          "actionRequired": <bool>
+        }`;
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': __apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+            'anthropic-dangerous-direct-browser-access': 'true' // Required for client-side fetch
+          },
+          body: JSON.stringify({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 1024,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: __imageB64 } }
+              ]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || 'API Error');
+        }
+
+        const data = await response.json();
+        const textResult = data.content[0].text;
+        const result = JSON.parse(textResult.replace(/```json/g, '').replace(/```/g, ''));
+        
         __displayResult(result);
         await __saveToHistory(result);
-        
-        // If integrated with app.js Apply button
-        if (__opts.onApply) {
-           // We could add an "Apply" button to the result panel
-        }
+
       } catch (err) {
-        console.error('[BioScanner] Error:', err);
-        resultArea.innerHTML = `<div class="result-panel"><div style="padding:20px;text-align:center;">⚠ Error rendering results.</div></div>`;
+        console.error('[BioScanner] AI Error:', err);
+        __toast('⚠ AI Analysis failed. Using simulation.');
+        const result = __simulateAnalysis();
+        __displayResult(result);
       }
-    }, (steps.length + 1) * 1200);
+    } else {
+      // ── SIMULATION FALLBACK ───────────────────────────────────────────────
+      setTimeout(() => {
+        const result = __simulateAnalysis();
+        __displayResult(result);
+      }, 3000);
+    }
+    
+    if (analyBtn) analyBtn.disabled = false;
   }
 
   function __simulateAnalysis() {
     const categories = {
-      Organic:   { emoji: '🍃', items: ['Banana Peel', 'Egg Shells', 'Coffee Grounds', 'Leftover Rice', 'Vegetable Scraps', 'Fruit Rind', 'Stale Bread'], biogas: true },
-      Plastic:   { emoji: '🥤', items: ['Water Bottle', 'Snack Wrapper', 'Milk Pouch', 'Plastic Cup', 'Polybag', 'Yogurt Tub'], biogas: false },
-      Glass:     { emoji: '🍾', items: ['Broken Bottle', 'Jam Jar', 'Medicine Vial'], biogas: false },
-      Metal:     { emoji: '🥫', items: ['Soda Can', 'Aluminium Foil', 'Tin Lid'], biogas: false },
-      Paper:     { emoji: '📦', items: ['Cardboard Box', 'Newspaper', 'Tissues'], biogas: false },
-      Hazardous: { emoji: '🔋', items: ['Used Battery', 'Expired Medicine', 'Bleach Bottle'], biogas: false }
+      Organic:   { emoji: '🍃', items: ['Banana Peel', 'Egg Shells', 'Vegetable Scraps'], biogas: true },
+      Plastic:   { emoji: '🥤', items: ['Water Bottle', 'Snack Wrapper'], biogas: false },
+      Glass:     { emoji: '🍾', items: ['Broken Bottle'], biogas: false }
     };
-
     const catKeys = Object.keys(categories);
-    const numItems = Math.floor(Math.random() * 3) + 3; 
+    const numItems = Math.floor(Math.random() * 3) + 2; 
     const detectedItems = [];
     let containsContaminants = false;
 
@@ -321,67 +363,25 @@ const BioScanner = (() => {
       const name = catData.items[Math.floor(Math.random() * catData.items.length)];
       const isContaminant = !catData.biogas;
       if (isContaminant) containsContaminants = true;
-
-      detectedItems.push({
-        name,
-        category: catName,
-        isContaminant,
-        emoji: catData.emoji
-      });
+      detectedItems.push({ name, category: catName, isContaminant, emoji: catData.emoji });
     }
 
-    const contaminantsFound = detectedItems.filter(i => i.isContaminant).map(i => i.name);
-    let segregationScore = containsContaminants ? Math.floor(Math.random() * 30) + 40 : Math.floor(Math.random() * 10) + 90;
-
-    const overallGrade = 
-      segregationScore >= 90 ? 'Excellent' :
-      segregationScore >= 75 ? 'Good' :
-      segregationScore >= 55 ? 'Fair' : 'Poor';
-
-    const biogasSuitability = 
-      segregationScore >= 85 ? 'Ideal' :
-      segregationScore >= 65 ? 'Acceptable' :
-      segregationScore >= 45 ? 'Marginal' : 'Reject';
-
-    const recommendations = [];
-    if (containsContaminants) {
-      recommendations.push({ icon: '🧤', text: `Please remove the ${contaminantsFound[0]} before disposal.` });
-      recommendations.push({ icon: '♻️', text: 'Separate non-organic items into the dry waste bin.' });
-    } else {
-      recommendations.push({ icon: '✨', text: 'Perfectly segregated organic waste batch.' });
-      recommendations.push({ icon: '🔒', text: 'Keep the bin lid tightly closed to avoid odour.' });
-    }
-
+    let segregationScore = containsContaminants ? 45 : 92;
     return {
       segregationScore,
-      overallGrade,
-      gradeSummary: containsContaminants ? `Detected ${contaminantsFound.length} contaminants. Batch needs sorting.` : "High-quality organic batch ready for processing.",
+      overallGrade: segregationScore > 80 ? 'Excellent' : 'Fair',
+      gradeSummary: containsContaminants ? "Contamination detected in the organic batch." : "Clean organic waste batch.",
       detectedItems,
-      contaminantsFound,
-      recommendations,
-      biogasSuitability,
-      estimatedOrganicPercent: containsContaminants ? Math.floor(Math.random() * 20) + 60 : 100,
+      recommendations: [{ icon: '🧤', text: 'Please sort the waste better next time.' }],
+      biogasSuitability: containsContaminants ? 'Marginal' : 'Ideal',
+      estimatedOrganicPercent: containsContaminants ? 70 : 100,
       actionRequired: containsContaminants
     };
   }
 
   async function __saveToHistory(result) {
-    const record = {
-      id: __uid(),
-      timestamp: __ts(),
-      imageBase64: __imageB64,
-      score: result.segregationScore,
-      grade: result.overallGrade,
-      summary: result.gradeSummary,
-      contaminants: result.contaminantsFound || [],
-      biogasSuitability: result.biogasSuitability,
-      actionRequired: result.actionRequired,
-      role: __opts.role,
-      org: __opts.userOrg,
-      userName: __opts.userName
-    };
-    const storageKey = `scan:${__opts.userId || 'anon'}:${record.id}`;
-    await __storage.set(storageKey, record);
+    const record = { id: __uid(), timestamp: __ts(), score: result.segregationScore, grade: result.overallGrade };
+    await __storage.set(`scan:${record.id}`, record);
     if (__opts.onScanSaved) __opts.onScanSaved(record);
     return record;
   }
@@ -390,35 +390,17 @@ const BioScanner = (() => {
     const resultArea = document.getElementById('bws-result');
     if (!resultArea) return;
 
-    const score = Math.max(0, Math.min(100, r.segregationScore || 0));
-    const headerBg = {
-      Excellent: 'linear-gradient(135deg,#0F6E56,#1D9E75)',
-      Good: 'linear-gradient(135deg,#2E5C00,#639922)',
-      Fair: 'linear-gradient(135deg,#6B3E0A,#BA7517)',
-      Poor: 'linear-gradient(135deg,#8B2E0E,#D85A30)'
-    }[r.overallGrade] || 'linear-gradient(135deg,#4a4840,#6B6860)';
-
-    const ringStroke = score >= 75 ? '#4ADE80' : score >= 50 ? '#FCD34D' : '#F87171';
+    const score = r.segregationScore || 0;
+    const headerBg = r.overallGrade === 'Excellent' ? 'linear-gradient(135deg,#0F6E56,#1D9E75)' : 'linear-gradient(135deg,#8B2E0E,#D85A30)';
+    const ringStroke = score >= 75 ? '#4ADE80' : '#F87171';
     const C = 2 * Math.PI * 34;
     const dashOffset = C * (1 - score / 100);
 
     const itemsHTML = (r.detectedItems || []).map(item => `
-      <div class="detected-item" style="background:${item.isContaminant ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.03)'};">
-        <div class="detected-item-name">
-          <span>${item.emoji || '•'}</span>
-          <span style="color:${item.isContaminant ? '#DC2626' : 'var(--text)'};">${item.name}</span>
-          ${item.isContaminant ? '<span style="font-size:9px; background:#FEE2E2; color:#DC2626; padding:1px 5px; border-radius:10px; margin-left:5px; font-weight:700;">CONTAMINANT</span>' : ''}
-        </div>
-        <span class="badge ${item.isContaminant ? 'badge-amber' : 'badge-green'}" style="font-size:10px; margin-top:4px;">${item.category}</span>
+      <div class="detected-item">
+        <div class="detected-item-name"><span>${item.emoji}</span> ${item.name}</div>
+        <span class="badge ${item.isContaminant ? 'badge-amber' : 'badge-green'}" style="font-size:10px;">${item.category}</span>
       </div>`).join('');
-
-    const recsHTML = (r.recommendations || []).map(rec =>
-      `<div class="rec-row">
-        <span class="rec-icon">${rec.icon || '•'}</span>
-        <span>${rec.text}</span>
-      </div>`).join('');
-
-    const suitBadge = { Ideal: 'badge-teal', Acceptable: 'badge-green', Marginal: 'badge-amber', Reject: 'badge-coral' }[r.biogasSuitability] || 'badge-grey';
 
     resultArea.innerHTML = `
       <div class="result-panel" style="margin-top:24px; animation: fadeIn 0.4s ease-out;">
@@ -428,33 +410,21 @@ const BioScanner = (() => {
               <svg viewBox="0 0 80 80" width="80" height="80">
                 <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
                 <circle cx="40" cy="40" r="34" fill="none" stroke="${ringStroke}" stroke-width="6"
-                  stroke-dasharray="${C}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"
-                  style="transition: stroke-dashoffset 1s ease-out;"/>
+                  stroke-dasharray="${C}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"/>
               </svg>
               <div class="score-ring-num" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#fff; font-weight:800; font-size:22px;">${score}</div>
             </div>
             <div>
-              <div class="score-grade-label" style="color:#fff; font-weight:800; font-size:24px; line-height:1; font-family:'Space Grotesk';">${r.overallGrade}</div>
+              <div class="score-grade-label" style="color:#fff; font-weight:800; font-size:24px; line-height:1;">${r.overallGrade}</div>
               <div style="margin-top:10px; display:flex; gap:8px;">
-                <span class="badge ${suitBadge}" style="font-size:11px;">⚗ ${r.biogasSuitability}</span>
-                ${r.actionRequired ? '<span class="badge badge-red" style="font-size:11px;">⚠ Action Required</span>' : '<span class="badge badge-green" style="font-size:11px;">✓ Ready</span>'}
+                <span class="badge badge-teal" style="font-size:11px;">⚗ ${r.biogasSuitability}</span>
               </div>
             </div>
           </div>
         </div>
         <div class="result-body" style="padding: 24px; background: var(--surface); border-radius: 0 0 20px 20px;">
-          <div style="font-size:15px; color:var(--text-muted); margin-bottom:20px; font-style:italic; line-height:1.5;">"${r.gradeSummary}"</div>
-          
-          <div style="margin-bottom:24px;">
-            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:1px;">Detected Items</div>
-            <div class="detected-grid">${itemsHTML}</div>
-          </div>
-
-          <div style="background:var(--surface-hover); padding:20px; border-radius:16px; border: 1px solid var(--border);">
-            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:1px;">Recommendations</div>
-            ${recsHTML}
-          </div>
-
+          <p style="font-size:15px; color:var(--text-muted); margin-bottom:20px; font-style:italic;">"${r.gradeSummary}"</p>
+          <div class="detected-grid">${itemsHTML}</div>
           <div style="display:flex; gap:12px; margin-top:24px;">
             <button class="btn btn-secondary" onclick="BioScanner.__retake()" style="flex:1;">🔄 New Scan</button>
             <button class="btn btn-primary" onclick="BioScanner.__applyResult(${score}, ${r.estimatedOrganicPercent})" style="flex:1.5;">📥 Apply Data</button>
@@ -463,15 +433,13 @@ const BioScanner = (() => {
       </div>`;
   }
 
-  // ── HELPER: Apply Scan Data to Form ──────────────────────────────────────
   function __applyResult(score, organicPercent) {
-    if (typeof __opts.onApply === 'function') {
-      __opts.onApply(score, organicPercent);
-    }
+    if (typeof __opts.onApply === 'function') __opts.onApply(score, organicPercent);
   }
 
-  function open(options) {
+  async function open(options) {
     __opts = options || {};
+    await __init();
     __render();
   }
 
@@ -485,7 +453,9 @@ const BioScanner = (() => {
     __captureFrame,
     __retake,
     __analyse,
-    __applyResult
+    __applyResult,
+    __toggleSettings,
+    __saveApiKey
   };
 
 })();

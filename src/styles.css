@@ -555,3 +555,11 @@ tr:hover td { background: var(--bg); }
 .detected-item-name { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 .rec-row { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; line-height: 1.4; color: var(--text); }
 .rec-icon { font-size: 18px; flex-shrink: 0; }
+
+/* SCANNER SETTINGS PANEL */
+.scanner-settings-btn { background: transparent; border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; font-size: 16px; }
+.scanner-settings-btn:hover { background: var(--surface-hover); border-color: var(--green); transform: rotate(30deg); }
+.scanner-settings-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); animation: fadeIn 0.3s ease; position: relative; z-index: 10; }
+.scanner-settings-panel .form-input { margin-bottom: 12px; font-family: monospace; font-size: 13px; }
+#bws-main-view { transition: opacity 0.3s ease; }
+
