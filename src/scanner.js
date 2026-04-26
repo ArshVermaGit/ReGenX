@@ -245,25 +245,28 @@ const BioScanner = (() => {
     r /= count; g /= count; b /= count;
     brightness = (r + g + b) / 3;
 
-    // Logic: Higher Green-to-Red ratio = More Organic. Higher Brightness = More Plastic/Metal.
+    // ── THE VISUAL HEURISTIC ENGINE ──
+    // This analyzes real-time pixel data to simulate an IoT sensor.
+    // For Production: Replace this with a Cloud AI (Gemini/Claude Vision) API call.
     const greenRatio = g / (r + 1); 
-    const isBright = brightness > 180; // Highly reflective
+    const isBright = brightness > 190; 
     
-    // Simple Skin-Tone / Human detection logic
-    const isSkinLike = (r > 120 && g > 80 && b > 60 && r > g && r > b && (r - g) > 20);
-    const isTooNeutral = Math.abs(r-g) < 10 && Math.abs(g-b) < 10; // Like a blank white/grey wall
+    // Strict Skin-Tone detection (R > G > B profile)
+    const isSkinLike = (r > 90 && g > 60 && b > 40 && r > g && g > b && (r - g) > 15 && (r - b) > 30);
+    // Neutral background detection (White/Grey walls)
+    const isTooNeutral = Math.abs(r-g) < 8 && Math.abs(g-b) < 8 && Math.abs(r-b) < 8;
     
-    let score = 55; // Base score
+    let score = 55; 
     if (greenRatio > 1.1) score += 20; 
     if (greenRatio > 1.3) score += 15; 
-    if (isBright) score -= 30; 
-    if (brightness < 60) score -= 10; 
+    if (isBright) score -= 35; 
+    if (brightness < 50) score -= 15; 
     
     return {
       score: Math.max(10, Math.min(100, Math.floor(score))),
       isGreen: greenRatio > 1.1,
       isBright: isBright,
-      isInvalid: isSkinLike || (isTooNeutral && brightness > 100)
+      isInvalid: isSkinLike || (isTooNeutral && brightness > 120)
     };
   }
 
