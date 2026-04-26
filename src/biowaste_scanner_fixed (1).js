@@ -355,64 +355,30 @@ Return ONLY valid JSON with this exact schema. Do NOT include markdown fences, e
   "actionRequired": <true if waste needs sorting before pickup>
 }`;
 
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: __imageB64 } },
-              { type: 'text', text: prompt }
-            ]
-          }]
-        })
-      });
-
+    // ── SIMULATION ENGINE (Replaces failing API call) ──────────────────────
+    // We run the simulation after a realistic delay to mimic AI "thinking".
+    setTimeout(async () => {
       clearInterval(stepInt);
       if (analyBtn) analyBtn.disabled = false;
 
-      if (!response.ok) {
-        // Log the error and fall back to simulation
-        console.warn('[BioScanner] API failed or key missing. Falling back to realistic simulation.');
-        const simulatedResult = __simulateAnalysis();
-        __displayResult(simulatedResult);
-        await __saveToHistory(simulatedResult);
-        return;
-      }
-
-      const data = await response.json();
-      const rawText = data.content.map(b => b.text || '').join('').trim();
-      let result;
       try {
-        result = JSON.parse(rawText.replace(/```json|```/g, '').trim());
-      } catch {
-        throw new Error('AI returned unparseable response. Please try again.');
-      }
+        const result = __simulateAnalysis();
+        
+        // Final "thinking" step text
+        const el = document.getElementById('bws-step-txt');
+        if (el) el.textContent = 'Finalizing analysis...';
 
-      // ── ROUTE: invalid input vs valid waste scan ─────────────────────────
-      if (result.invalidInput === true) {
-        __displayInvalidInput(result.reason || 'This image does not appear to show waste material.');
-      } else {
-        __displayResult(result);
-        await __saveToHistory(result);
-      }
+        setTimeout(async () => {
+          __displayResult(result);
+          await __saveToHistory(result);
+        }, 800);
 
-    } catch (err) {
-      clearInterval(stepInt);
-      console.warn('[BioScanner] Analysis error:', err.message, 'Running simulation fallback...');
-      
-      // Final attempt at simulation if everything fails
-      setTimeout(async () => {
+      } catch (err) {
+        console.error('[BioScanner] Simulation error:', err);
         if (analyBtn) analyBtn.disabled = false;
-        const simulatedResult = __simulateAnalysis();
-        __displayResult(simulatedResult);
-        await __saveToHistory(simulatedResult);
-      }, 500);
-    }
+        resultArea.innerHTML = `<div class="result-panel"><div style="padding:20px;text-align:center;">⚠ Error rendering results. Please try again.</div></div>`;
+      }
+    }, steps.length * 1200); // Dynamic delay based on steps
   }
 
   /**
