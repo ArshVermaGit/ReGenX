@@ -1,7 +1,7 @@
 /**
  * ========================================================================================================================
  * BioWaste — AI Waste Scanner Module
- * File: scanner.js (Smart Vision + Dual AI Engine)
+ * File: biowaste_scanner_fixed.js (Smart Vision + Dual AI Engine)
  * ========================================================================================================================
  */
 
@@ -322,20 +322,15 @@ const BioScanner = (() => {
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     
     let r=0, g=0, b=0;
-    for (let i = 0; i < pixels.length; i += 40) { // Sample every 10th pixel
+    for (let i = 0; i < pixels.length; i += 40) { 
       r += pixels[i]; g += pixels[i+1]; b += pixels[i+2];
     }
     const count = pixels.length / 40;
     r /= count; g /= count; b /= count;
 
-    // Logic: 
-    // High Green -> Organic
-    // High Blue/Red/Vibrant -> Plastic/Metal
-    // Dark/Gray -> Mixed Trash
-    
-    const isOrganic = (g > r + 5 && g > b + 5) || (r > 100 && g > 100 && b < 100); // Yellowish/Greenish
-    const isPlastic = (b > r + 10) || (r > 200 && g > 200 && b > 200); // Blue or White
-    const isMetal = (Math.abs(r-g) < 10 && Math.abs(g-b) < 10 && r > 100); // Grayish/Metallic
+    const isOrganic = (g > r + 5 && g > b + 5) || (r > 100 && g > 100 && b < 100); 
+    const isPlastic = (b > r + 10) || (r > 200 && g > 200 && b > 200); 
+    const isMetal = (Math.abs(r-g) < 10 && Math.abs(g-b) < 10 && r > 100); 
 
     let detectedItems = [];
     let score = 95;
@@ -403,7 +398,6 @@ const BioScanner = (() => {
   }
 
   async function __callGemini(resultArea) {
-    // Note: Gemini implementation would go here using the Google AI SDK or direct fetch
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${__apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
