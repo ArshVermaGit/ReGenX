@@ -385,7 +385,18 @@ window.showView = function(viewId) {
   // Set Title
   if(btn) document.getElementById('tb-view-title').textContent = btn.innerText.replace(/[^a-zA-Z\s]/g, '').trim();
   
+  if (window.innerWidth <= 768) toggleSidebar(false);
   refreshCurrentView(true);
+}
+
+window.toggleSidebar = function(force) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if(!sb || !ov) return;
+  
+  const isOpen = force !== undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', isOpen);
+  ov.classList.toggle('open', isOpen);
 }
 
 // ── CORE DATA ENGINE ──
