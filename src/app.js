@@ -581,9 +581,6 @@ async function renderProvider(mc, fullRender) {
         <button class="glass-card" style="flex:1; padding:12px; text-align:center; border-color:var(--green);" onclick="showView('v-pv-req')">
           <div style="font-size:20px;">🚀</div><div style="font-size:11px; font-weight:600; margin-top:4px;">Dispatch</div>
         </button>
-        <button class="glass-card" style="flex:1; padding:12px; text-align:center; border-color:var(--blue);" onclick="openScanner()">
-          <div style="font-size:20px;">📸</div><div style="font-size:11px; font-weight:600; margin-top:4px;">AI Scan</div>
-        </button>
         <button class="glass-card" style="flex:1; padding:12px; text-align:center; border-color:var(--amber);" onclick="showView('v-market')">
           <div style="font-size:20px;">🛒</div><div style="font-size:11px; font-weight:600; margin-top:4px;">Exchange</div>
         </button>
@@ -617,10 +614,10 @@ async function renderProvider(mc, fullRender) {
             <button class="btn btn-primary" onclick="showView('v-pv-req')">Create Request →</button>
           </div>
 
-          <h3 class="heading" style="margin-top:24px; margin-bottom:16px;">AI Vision Waste Scanner</h3>
+          <h3 class="heading" style="margin-top:24px; margin-bottom:16px;">Market Summary</h3>
           <div class="glass-card" style="margin-bottom:16px; border-color:var(--blue);">
-            <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Assess contamination and weight via computer vision before dispatch.</div>
-            <button class="btn btn-primary btn-full" onclick="openScanner()">📸 Launch AI Scanner</button>
+            <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Access the carbon credit exchange to trade your earned $RGX tokens.</div>
+            <button class="btn btn-primary btn-full" onclick="showView('v-market')">🛒 Open Market</button>
           </div>
 
           <div class="glass-card sensor-card" style="margin-top:24px; padding:16px;">
