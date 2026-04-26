@@ -740,25 +740,31 @@ window.openScanner = function() {
     <div class="scanner-viewport scanner-corners">
       <video id="camera-feed" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
       <div class="laser-line"></div>
+      <div id="ai-status" style="position:absolute; top:12px; left:12px; background:rgba(0,0,0,0.7); color:#0f0; padding:4px 8px; font-size:10px; border-radius:4px; font-family:monospace;">> AI INITIALIZING...</div>
     </div>
+    
     <div id="scanner-result" style="display:none; background:var(--green-light); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid var(--green);">
-       <div style="font-weight:700; color:var(--green-hover); margin-bottom:12px;">✓ AI IoT Sensory Scan Complete</div>
-       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Detection:</span> <strong id="scan-type">--</strong></div>
-       <div class="between" style="font-size:13px; margin-bottom:8px;"><span class="muted">Bio-Suitability:</span> <strong id="scan-suitability" style="color:var(--green)">--</strong></div>
+       <div style="font-weight:700; color:var(--green-hover); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <div style="width:10px; height:10px; background:var(--green); border-radius:50%; animation: pulse 1s infinite;"></div>
+          ✓ IoT SENSORY ANALYSIS READY
+       </div>
        
-       <!-- Suitability Gauge -->
+       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Object Recognized:</span> <strong id="scan-object">Waste Detected</strong></div>
+       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Material Type:</span> <strong id="scan-type">--</strong></div>
+       <div class="between" style="font-size:13px; margin-bottom:8px;"><span class="muted">Bio-Suitability Index:</span> <strong id="scan-suitability" style="color:var(--green)">--</strong></div>
+       
        <div style="width:100%; height:8px; background:rgba(0,0,0,0.1); border-radius:4px; margin-bottom:12px; overflow:hidden;">
           <div id="suitability-bar" style="width:0%; height:100%; background:var(--green); transition:width 1.5s ease-out;"></div>
        </div>
 
-       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Exact Contamination:</span> <strong id="scan-contam" style="color:var(--red)">--</strong></div>
-       <div style="font-size:11px; color:var(--text-muted); margin-bottom:12px; background:rgba(255,255,255,0.5); padding:8px; border-radius:6px;" id="contam-breakdown">
+       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Contamination Index:</span> <strong id="scan-contam" style="color:var(--red)">--</strong></div>
+       <div style="font-size:11px; color:var(--text-muted); margin-bottom:12px; background:rgba(255,255,255,0.5); padding:8px; border-radius:6px; font-family:monospace;" id="contam-breakdown">
           Analysis: Plastic (0%), Inorganic (0%), Chemical (0%)
        </div>
        
-       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">Est. Weight:</span> <strong id="scan-weight">--</strong></div>
+       <div class="between" style="font-size:13px; margin-bottom:4px;"><span class="muted">IoT Est. Weight:</span> <strong id="scan-weight">--</strong></div>
        <div style="margin-top:12px; padding:12px; background:white; border-radius:8px; border:1px solid rgba(0,0,0,0.1); font-size:12px;">
-          <strong>AI IoT Recommendation:</strong> <span id="scan-recom">Analyzing...</span>
+          <strong>AI IoT LOGIC:</strong> <span id="scan-recom">Analyzing...</span>
        </div>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
@@ -768,6 +774,10 @@ window.openScanner = function() {
   `;
   document.getElementById('modal-box').innerHTML = html;
   document.getElementById('modal').classList.add('open');
+  
+  const status = document.getElementById('ai-status');
+  setTimeout(() => { if(status) status.innerText = "> OBJECT RECOGNITION ACTIVE..."; }, 1000);
+  setTimeout(() => { if(status) status.innerText = "> SENSING MATERIAL DENSITY..."; }, 2500);
   
   if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
@@ -781,6 +791,22 @@ window.openScanner = function() {
   }
 
   setTimeout(() => {
+    if(status) status.innerText = "> DATA ACQUIRED. PROCESSING...";
+    
+    // Simulate "Invalid Object" detection if scanning a person (funny but smart logic)
+    const isInvalid = Math.random() < 0.1; // 10% chance to fail if it "detects" a non-waste object
+    
+    if (isInvalid) {
+      document.getElementById('scan-object').textContent = "NON-WASTE OBJECT";
+      document.getElementById('scan-object').style.color = "var(--red)";
+      document.getElementById('scan-recom').innerHTML = `<b style="color:var(--red)">⚠ INVALID OBJECT</b>. AI has detected a non-waste entity (possibly human). Please re-aim at biowaste.`;
+      document.getElementById('scanner-result').style.display = 'block';
+      document.getElementById('btn-scan-action').textContent = "Retry Scan";
+      document.getElementById('btn-scan-action').disabled = false;
+      document.getElementById('btn-scan-action').onclick = () => { closeScanner(); openScanner(); };
+      return;
+    }
+
     const isOrganic = Math.random() > 0.3;
     const type = isOrganic ? "Organic (Food/Green Waste)" : "Recyclable (Paper/Plastic)";
     const suitScore = isOrganic ? Math.floor(Math.random() * 20 + 80) : Math.floor(Math.random() * 20);
@@ -806,7 +832,7 @@ window.openScanner = function() {
     
     const btn = document.getElementById('btn-scan-action');
     btn.disabled = false;
-    btn.textContent = "Accept AI Recommendation →";
+    btn.textContent = "✓ USE DATA & DISPATCH";
     btn.onclick = () => { 
       closeScanner(); 
       showView('v-pv-req'); 
@@ -815,7 +841,7 @@ window.openScanner = function() {
         document.getElementById('req-type').value = isOrganic ? "Food Waste" : "Dry Waste";
       }, 100); 
     };
-  }, 4000);
+  }, 4500);
 }
 
 window.closeScanner = function() {
