@@ -25,6 +25,27 @@ export const ESGReporter = {
         const reportHash = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('');
         const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+        // Save generated verification record to ReGenX Public Audit registry
+        try {
+            if (window.DB) {
+                const registry = window.DB.get('audit-registry') || [];
+                registry.push({
+                    hash: reportHash,
+                    org: account.org || account.name,
+                    role: account.role,
+                    userId: account.id,
+                    totalKg,
+                    totalCO2,
+                    tokens: totalTokens,
+                    dispatchesCount: history.length,
+                    timestamp: Date.now()
+                });
+                window.DB.set('audit-registry', registry);
+            }
+        } catch (e) {
+            console.error("Failed to store verification record:", e);
+        }
+
         // Construct HTML for the PDF
         const element = document.createElement('div');
         element.style.padding = '40px';
