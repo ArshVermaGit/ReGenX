@@ -261,6 +261,82 @@ tr:hover td { background: var(--bg); }
 .tl-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
 .tl-sub { font-size: 12px; color: var(--text-muted); }
 
+/* TRUST INDEX + INTEGRITY SCAN */
+.trust-index-card { border: 1px solid var(--border); }
+.trust-index-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.trust-index-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+.integrity-scan-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+.integrity-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid var(--green-light);
+  border-top-color: var(--green);
+  animation: integrity-spin 0.9s linear infinite;
+}
+.integrity-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.trust-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  padding-left: 10px;
+}
+.trust-tl-item { position: relative; display: flex; gap: 12px; align-items: flex-start; }
+.trust-tl-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.trust-tl-line {
+  position: absolute;
+  left: 16px;
+  top: 36px;
+  width: 2px;
+  height: calc(100% + 8px);
+  background: var(--border);
+}
+.trust-tl-title { font-weight: 700; font-size: 13px; }
+.trust-tl-sub { font-size: 11px; color: var(--text-muted); }
+@keyframes integrity-spin { 100% { transform: rotate(360deg); } }
+
 /* TOASTS & MODALS */
 #toast {
   position: fixed; bottom: 32px; right: 32px; z-index: 9999;
