@@ -14,6 +14,7 @@ const CREDIT_LEDGER_KEY = "credit-ledger";
 const SLA_LEDGER_KEY = "sla-ledger";
 const ENERGY_LEDGER_KEY = "energy-ledger";
 const SENSOR_LEDGER_KEY = "sensor-ledger";
+const EMISSIONS_LEDGER_KEY = "emissions-ledger";
 
 // ── PWA Service Worker v3 Registration ──
 if ('serviceWorker' in navigator) {
@@ -715,6 +716,76 @@ function renderSensorWidget() {
   `;
 }
 
+/**
+ * Load emissions ledger entries.
+ * @returns {Array<Object>} Emissions entries.
+ */
+function loadEmissionsLedger() {
+  try {
+    const raw = window.localStorage.getItem(EMISSIONS_LEDGER_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save emissions ledger entries.
+ * @param {Array<Object>} entries - Emissions entries.
+ */
+function saveEmissionsLedger(entries) {
+  try { window.localStorage.setItem(EMISSIONS_LEDGER_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+}
+
+/**
+ * Add a new emissions ledger entry.
+ * @param {Object} entry - Emissions entry.
+ */
+function addEmissionsEntry(entry) {
+  const entries = loadEmissionsLedger();
+  entries.push(entry);
+  saveEmissionsLedger(entries);
+}
+
+/**
+ * Summarize emissions ledger.
+ * @returns {{total:number, totalEmissions:number, totalOffset:number, avgScore:number}}
+ */
+function getEmissionsSummary() {
+  const entries = loadEmissionsLedger();
+  if (!entries.length) return { total: 0, totalEmissions: 0, totalOffset: 0, avgScore: 0 };
+  const totalEmissions = entries.reduce((s, e) => s + e.emissionKg, 0);
+  const totalOffset = entries.reduce((s, e) => s + e.offsetKg, 0);
+  const avgScore = Math.round(entries.reduce((s, e) => s + e.score, 0) / entries.length);
+  return { total: entries.length, totalEmissions: Math.round(totalEmissions), totalOffset: Math.round(totalOffset), avgScore };
+}
+
+/**
+ * Render emissions tracker widget.
+ * @returns {string} HTML string.
+ */
+function renderEmissionsWidget() {
+  const summary = getEmissionsSummary();
+  const badgeClass = summary.avgScore >= 85 ? 'badge-green' : summary.avgScore >= 70 ? 'badge-blue' : summary.avgScore >= 55 ? 'badge-amber' : 'badge-red';
+  return `
+    <div class="glass-card emissions-card" style="margin-bottom:24px;">
+      <div class="between" style="margin-bottom:12px;">
+        <div>
+          <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Route Emissions Tracker</div>
+          <div style="font-size:18px; font-weight:800; margin-top:4px;">${summary.avgScore || '--'} / 100</div>
+        </div>
+        <span class="badge ${badgeClass}">${summary.totalEmissions} kg CO₂</span>
+      </div>
+      <div class="emissions-bar"><span style="width:${summary.avgScore}%;"></span></div>
+      <div class="between" style="margin-top:10px; font-size:12px; color:var(--text-muted);">
+        <div>${summary.totalOffset} kg offset</div>
+        <button class="btn btn-ghost btn-sm" onclick="showView('v-emissions')">Open →</button>
+      </div>
+    </div>
+  `;
+}
+
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function ts() { return Date.now(); }
 function fmtDate(ms) { return new Date(ms).toLocaleDateString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
@@ -1082,6 +1153,7 @@ function buildSidebar() {
       <button class="nav-item" onclick="showView('v-sla')" id="nav-v-sla"><span class="nav-item-icon">⏱️</span> SLA Monitor</button>
       <button class="nav-item" onclick="showView('v-energy')" id="nav-v-energy"><span class="nav-item-icon">⚡</span> Energy Scorecard</button>
       <button class="nav-item" onclick="showView('v-sensor')" id="nav-v-sensor"><span class="nav-item-icon">📡</span> Sensor Reliability</button>
+      <button class="nav-item" onclick="showView('v-emissions')" id="nav-v-emissions"><span class="nav-item-icon">🌫️</span> Emissions Tracker</button>
       <button class="nav-item" onclick="showView('v-market')" id="nav-v-market"><span class="nav-item-icon">🛒</span> ReGen Exchange</button>
       <button class="nav-item" onclick="showView('v-audit-portal')" id="nav-v-audit-portal"><span class="nav-item-icon">🔒</span> Public Verification</button>
     `;
@@ -1097,6 +1169,7 @@ function buildSidebar() {
       <button class="nav-item" onclick="showView('v-sla')" id="nav-v-sla"><span class="nav-item-icon">⏱️</span> SLA Monitor</button>
       <button class="nav-item" onclick="showView('v-energy')" id="nav-v-energy"><span class="nav-item-icon">⚡</span> Energy Scorecard</button>
       <button class="nav-item" onclick="showView('v-sensor')" id="nav-v-sensor"><span class="nav-item-icon">📡</span> Sensor Reliability</button>
+      <button class="nav-item" onclick="showView('v-emissions')" id="nav-v-emissions"><span class="nav-item-icon">🌫️</span> Emissions Tracker</button>
       <button class="nav-item" onclick="showView('v-audit-portal')" id="nav-v-audit-portal"><span class="nav-item-icon">🔒</span> Public Verification</button>
     `;
     showView('v-rd-dash');
@@ -1111,6 +1184,7 @@ function buildSidebar() {
       <button class="nav-item" onclick="showView('v-sla')" id="nav-v-sla"><span class="nav-item-icon">⏱️</span> SLA Monitor</button>
       <button class="nav-item" onclick="showView('v-energy')" id="nav-v-energy"><span class="nav-item-icon">⚡</span> Energy Scorecard</button>
       <button class="nav-item" onclick="showView('v-sensor')" id="nav-v-sensor"><span class="nav-item-icon">📡</span> Sensor Reliability</button>
+      <button class="nav-item" onclick="showView('v-emissions')" id="nav-v-emissions"><span class="nav-item-icon">🌫️</span> Emissions Tracker</button>
       <button class="nav-item" onclick="showView('v-audit-portal')" id="nav-v-audit-portal"><span class="nav-item-icon">🔒</span> Public Verification</button>
     `;
     showView('v-pl-dash');
@@ -1124,7 +1198,7 @@ window.showView = function(viewId) {
   if(btn) btn.classList.add('active');
   
   // Set Title
-  const titleMap = { 'v-iot-bins': 'IoT Sensory Bins', 'v-compliance': 'Compliance Center', 'v-reconciliation': 'Reconciliation', 'v-sla': 'SLA Monitor', 'v-energy': 'Energy Scorecard', 'v-sensor': 'Sensor Reliability' };
+  const titleMap = { 'v-iot-bins': 'IoT Sensory Bins', 'v-compliance': 'Compliance Center', 'v-reconciliation': 'Reconciliation', 'v-sla': 'SLA Monitor', 'v-energy': 'Energy Scorecard', 'v-sensor': 'Sensor Reliability', 'v-emissions': 'Emissions Tracker' };
   if(btn) document.getElementById('tb-view-title').textContent = titleMap[viewId] || btn.innerText.replace(/[^a-zA-Z\s]/g, '').trim();
   
   if (window.innerWidth <= 768) toggleSidebar(false);
@@ -1379,6 +1453,10 @@ async function refreshCurrentView(fullRender = false) {
   }
   if (currentView === 'v-sensor') {
     renderSensorReliability(mc, fullRender);
+    return;
+  }
+  if (currentView === 'v-emissions') {
+    renderEmissionsTracker(mc, fullRender);
     return;
   }
   if (currentView === 'v-market') {
@@ -1718,6 +1796,51 @@ function renderSensorReliability(mc, fullRender) {
   `;
 }
 
+/**
+ * Render emissions tracker view.
+ * @param {HTMLElement} mc - Main content container.
+ * @param {boolean} fullRender - Whether to fully render.
+ */
+function renderEmissionsTracker(mc, fullRender) {
+  const entries = loadEmissionsLedger().sort((a, b) => b.ts - a.ts);
+  const summary = getEmissionsSummary();
+  if (!fullRender) return;
+
+  mc.innerHTML = `
+    <div class="between" style="margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h3 class="heading">Route Emissions Tracker</h3>
+        <div style="font-size:13px; color:var(--text-muted);">Compare logistics emissions against verified offset impact.</div>
+      </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom:24px;">
+      <div class="stat-card"><div class="stat-val">${summary.total}</div><div class="stat-lbl">Tracked Routes</div></div>
+      <div class="stat-card"><div class="stat-val">${summary.totalEmissions}</div><div class="stat-lbl">CO₂ Emitted (kg)</div></div>
+      <div class="stat-card"><div class="stat-val">${summary.totalOffset}</div><div class="stat-lbl">CO₂ Offset (kg)</div></div>
+      <div class="stat-card"><div class="stat-val">${summary.avgScore || 0}</div><div class="stat-lbl">Efficiency Score</div></div>
+    </div>
+
+    <div class="glass-card emissions-card">
+      <div class="between" style="margin-bottom:12px;">
+        <h4 style="font-size:16px;">Recent Routes</h4>
+        <span class="badge badge-blue">Logistics Footprint</span>
+      </div>
+      <div class="emissions-list">
+        ${entries.length ? entries.slice(0, 12).map(e => `
+          <div class="emissions-item">
+            <div>
+              <div class="emissions-title">${e.org} · ${e.distanceKm} km</div>
+              <div class="emissions-sub">${e.emissionKg} kg emitted · ${e.offsetKg} kg offset · ${fmtDate(e.ts)}</div>
+            </div>
+            <span class="badge ${e.score >= 85 ? 'badge-green' : e.score >= 70 ? 'badge-blue' : e.score >= 55 ? 'badge-amber' : 'badge-red'}">${e.score}</span>
+          </div>
+        `).join('') : '<div class="empty-state">No emissions records yet.</div>'}
+      </div>
+    </div>
+  `;
+}
+
 // ════════ PROVIDER LOGIC ════════
 async function renderProvider(mc, fullRender) {
   const orders = getAllOrders().filter(o => o.providerId === SESSION.id);
@@ -1743,6 +1866,7 @@ async function renderProvider(mc, fullRender) {
       ${renderSlaWidget()}
       ${renderEnergyWidget()}
       ${renderSensorWidget()}
+      ${renderEmissionsWidget()}
       <div class="two-col">
         <div>
           <h3 class="heading" style="margin-bottom:16px;">Active Dispatches</h3><div id="pv-act"></div>
@@ -2302,6 +2426,7 @@ async function renderRider(mc, fullRender) {
       ${renderSlaWidget()}
       ${renderEnergyWidget()}
       ${renderSensorWidget()}
+      ${renderEmissionsWidget()}
 
       <div class="two-col">
         <div class="${tab !== 'route' ? 'desktop-only' : ''}">
@@ -2780,6 +2905,7 @@ async function renderPlant(mc, fullRender) {
       ${renderSlaWidget()}
       ${renderEnergyWidget()}
       ${renderSensorWidget()}
+      ${renderEmissionsWidget()}
       
       <div id="pl-ai-widget"></div>
       
@@ -3041,6 +3167,23 @@ window.confirmPlantReceipt = function(id) {
       kg: kgProcessed,
       energyKwh,
       efficiencyPct,
+      score,
+      ts: ts()
+    });
+  }
+  const route = getOrderRouteEndpoints(o);
+  if (route.start && route.end) {
+    const distanceKm = parseFloat(distanceKm(route.start.lat, route.start.lng, route.end.lat, route.end.lng).toFixed(1));
+    const emissionKg = parseFloat((distanceKm * 0.21).toFixed(2));
+    const offsetKg = parseFloat((kgProcessed * 0.62).toFixed(2));
+    const score = Math.max(10, Math.min(100, Math.round((offsetKg / Math.max(emissionKg, 1)) * 100)));
+    addEmissionsEntry({
+      id: 'ems-' + uid(),
+      orderId: o.id,
+      org: o.providerOrg,
+      distanceKm,
+      emissionKg,
+      offsetKg,
       score,
       ts: ts()
     });
