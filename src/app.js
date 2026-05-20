@@ -2051,3 +2051,15 @@ switchAuthTab('login');
 
 // ── Initialize Appwrite Cloud Sync Engine ──
 setTimeout(() => { if (window.CloudSync) window.CloudSync.init(); }, 1000);
+
+// Expose module-scoped functions to global scope for inline HTML handlers
+window.doRegister = doRegister;
+window.doLogin = doLogin;
+window.switchAuthTab = switchAuthTab;
+window.selectRole = selectRole;
+window.detectGPS = detectGPS;
+window.searchLocation = searchLocation;
+window.resetAppData = resetAppData;
+window.doLogout = doLogout;
+window.toggleTheme = toggleTheme;
+window.toggleSidebar = toggleSidebar;
