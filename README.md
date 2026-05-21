@@ -132,7 +132,6 @@ Ensure accessibility and mobile optimization
 
 ```
 
-```bash
 ReGenX/
 ├── .github/                  
 │   ├── ISSUE_TEMPLATE/
