@@ -1,11 +1,15 @@
+<h1 align="center">
+ ### 🌿 ReGenX
+</h1>
 
 <div align="center">
-# 🌿 ReGenX
 
 ### *Smart Circular Bio-Waste Logistics Platform with AI scanning, real-time GPS tracking, and role-based dashboards for Providers, Riders & Processing Plants.*
 
-
-
+<br>
+<br>
+<br>
+<br>
 
 ### 👨‍🏫 Project Mentor
 **SATYAM PANDEY**
