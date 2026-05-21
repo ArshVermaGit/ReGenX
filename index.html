@@ -39,6 +39,7 @@
   <!-- Custom Assets -->
   <link rel="stylesheet" href="./src/styles.css?v=11" />
   <script src="./src/scanner.js?v=11"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script type="module" src="./src/app.js?v=11"></script>
 
 </head>
@@ -122,6 +123,19 @@
 <button class="btn btn-primary btn-full" onclick="doLogin()" style="margin-top:10px;">
     Enter Dashboard →
 </button>
+<div
+
+  id="google-login-btn"
+  style="
+    /* margin-top: 14px; */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    transition: all 0.3s ease;
+  "
+></div>
 
 <div style="
 display:flex;
@@ -246,6 +260,7 @@ margin-top:18px;
   <div class="modal-overlay" id="modal" onclick="if(event.target === this) closeScanner()">
     <div class="modal-box glass-card" id="modal-box"></div>
   </div>
+
 
 </body>
 

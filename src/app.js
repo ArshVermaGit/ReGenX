@@ -844,6 +844,109 @@ window.toggleTheme = function() {
 const savedTheme = window.localStorage.getItem('regenx-theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
+// ══════════════════════════════════════
+// GOOGLE AUTH
+// ══════════════════════════════════════
+
+window.initGoogleAuth = function () {
+
+  if (!window.google) {
+    console.error("Google SDK not loaded");
+    return;
+  }
+
+  google.accounts.id.initialize({
+
+    client_id:
+      "661991506161-rb6j5n5klovjupfal1ip2qstcu0k366a.apps.googleusercontent.com",
+
+    callback:
+      handleGoogleLogin
+  });
+
+  // RENDER GOOGLE BUTTON
+  google.accounts.id.renderButton(
+
+    document.getElementById(
+      "google-login-btn"
+    ),
+
+    {
+      theme: "outline",
+      size: "large",
+      width: 280
+    }
+  );
+};
+
+function handleGoogleLogin(response) {
+
+  const token =
+    response.credential;
+
+  const payload =
+    JSON.parse(
+      atob(token.split('.')[1])
+    );
+
+  const acc = {
+
+    id: uid(),
+
+    role: "provider",
+
+    name: payload.name,
+
+    org: payload.email,
+
+    email: payload.email,
+
+    avatar: payload.picture,
+
+    lat: 28.5355,
+
+    lng: 77.3910,
+
+    tokens: 0,
+
+    authProvider: "google"
+  };
+
+  // SAVE ACCOUNT
+ const existing = DB
+  .list('acc:')
+  .map(k => DB.get(k))
+  .find(u => u.email === acc.email);
+
+if(existing){
+
+  executeLogin(existing);
+
+}else{
+
+  DB.set('acc:' + acc.id, acc);
+
+  executeLogin(acc);
+}
+
+  // LOGIN DIRECTLY
+  executeLogin(acc);
+
+  showToast(
+    `✓ Welcome ${acc.name}`
+  );
+}
+
+// AUTO LOGIN CHECK
+window.addEventListener("DOMContentLoaded", () => {
+
+  setTimeout(() => {
+
+    initGoogleAuth();
+
+  }, 500);
+});
+
 // ── AUTH & REGISTRATION ──
 window.switchAuthTab = function(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
