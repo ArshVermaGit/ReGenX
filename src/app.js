@@ -252,8 +252,9 @@ function loadTrustLedger() {
  */
 function saveTrustLedger(events) {
   try {
-    window.localStorage.setItem(TRUST_LEDGER_KEY, JSON.stringify(events));
-    ReGenXRealtime?.syncRawKey(TRUST_LEDGER_KEY, events, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
+    const capped = Array.isArray(events) ? events.slice(-200) : [];
+    window.localStorage.setItem(TRUST_LEDGER_KEY, JSON.stringify(capped));
+    ReGenXRealtime?.syncRawKey(TRUST_LEDGER_KEY, capped, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
   } catch { /* ignore */ }
 }
 
@@ -418,8 +419,9 @@ function loadEsgAlerts() {
  */
 function saveEsgAlerts(alerts) {
   try {
-    window.localStorage.setItem(ESG_ALERTS_KEY, JSON.stringify(alerts));
-    ReGenXRealtime?.syncRawKey(ESG_ALERTS_KEY, alerts, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
+    const capped = Array.isArray(alerts) ? alerts.slice(-200) : [];
+    window.localStorage.setItem(ESG_ALERTS_KEY, JSON.stringify(capped));
+    ReGenXRealtime?.syncRawKey(ESG_ALERTS_KEY, capped, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
   } catch { /* ignore */ }
 }
 
@@ -562,8 +564,9 @@ function loadCreditLedger() {
  */
 function saveCreditLedger(entries) {
   try {
-    window.localStorage.setItem(CREDIT_LEDGER_KEY, JSON.stringify(entries));
-    ReGenXRealtime?.syncRawKey(CREDIT_LEDGER_KEY, entries, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room'] });
+    const capped = Array.isArray(entries) ? entries.slice(-200) : [];
+    window.localStorage.setItem(CREDIT_LEDGER_KEY, JSON.stringify(capped));
+    ReGenXRealtime?.syncRawKey(CREDIT_LEDGER_KEY, capped, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room'] });
   } catch { /* ignore */ }
 }
 
@@ -644,8 +647,9 @@ function loadSlaLedger() {
  */
 function saveSlaLedger(entries) {
   try {
-    window.localStorage.setItem(SLA_LEDGER_KEY, JSON.stringify(entries));
-    ReGenXRealtime?.syncRawKey(SLA_LEDGER_KEY, entries, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
+    const capped = Array.isArray(entries) ? entries.slice(-200) : [];
+    window.localStorage.setItem(SLA_LEDGER_KEY, JSON.stringify(capped));
+    ReGenXRealtime?.syncRawKey(SLA_LEDGER_KEY, capped, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'riders_room', 'plants_room'] });
   } catch { /* ignore */ }
 }
 
@@ -758,8 +762,9 @@ function loadEnergyLedger() {
  */
 function saveEnergyLedger(entries) {
   try {
-    window.localStorage.setItem(ENERGY_LEDGER_KEY, JSON.stringify(entries));
-    ReGenXRealtime?.syncRawKey(ENERGY_LEDGER_KEY, entries, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'plants_room'] });
+    const capped = Array.isArray(entries) ? entries.slice(-200) : [];
+    window.localStorage.setItem(ENERGY_LEDGER_KEY, JSON.stringify(capped));
+    ReGenXRealtime?.syncRawKey(ENERGY_LEDGER_KEY, capped, { eventType: 'KPI_UPDATED', rooms: ['network_room', 'providers_room', 'plants_room'] });
   } catch { /* ignore */ }
 }
 
@@ -839,7 +844,10 @@ function loadSensorLedger() {
  * @param {Array<Object>} entries - Sensor snapshots.
  */
 function saveSensorLedger(entries) {
-  try { window.localStorage.setItem(SENSOR_LEDGER_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+  try {
+    const capped = Array.isArray(entries) ? entries.slice(-50) : [];
+    window.localStorage.setItem(SENSOR_LEDGER_KEY, JSON.stringify(capped));
+  } catch { /* ignore */ }
 }
 
 /**
@@ -921,7 +929,10 @@ function loadEmissionsLedger() {
  * @param {Array<Object>} entries - Emissions entries.
  */
 function saveEmissionsLedger(entries) {
-  try { window.localStorage.setItem(EMISSIONS_LEDGER_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+  try {
+    const capped = Array.isArray(entries) ? entries.slice(-200) : [];
+    window.localStorage.setItem(EMISSIONS_LEDGER_KEY, JSON.stringify(capped));
+  } catch { /* ignore */ }
 }
 
 /**
@@ -1001,7 +1012,10 @@ function loadQualityLedger() {
  * @param {Array<Object>} entries - Quality entries.
  */
 function saveQualityLedger(entries) {
-  try { window.localStorage.setItem(QUALITY_LEDGER_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+  try {
+    const capped = Array.isArray(entries) ? entries.slice(-200) : [];
+    window.localStorage.setItem(QUALITY_LEDGER_KEY, JSON.stringify(capped));
+  } catch { /* ignore */ }
 }
 
 /**
