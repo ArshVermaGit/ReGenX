@@ -131,7 +131,7 @@ export const ESGReporter = {
         // Configure html2pdf
         const opt = {
             margin:       0.5,
-            filename:     `ReGenX_ESG_Report_${account.org.replace(/\\s+/g, '_')}.pdf`,
+            filename:     `ReGenX_ESG_Report_${(account.org || account.name || 'User').replace(/\s+/g, '_')}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
