@@ -149,7 +149,7 @@ export const AuditPortal = {
     /**
      * Executes the verification sequence and dynamically injects the result with smooth CSS micro-animations.
      */
-    triggerVerification: () => {
+    triggerVerification: async () => {
         const input = document.getElementById('audit-hash-input');
         const container = document.getElementById('verification-result-container');
         if (!input || !container) return;
@@ -166,7 +166,6 @@ export const AuditPortal = {
             return;
         }
 
-        // Search in registry
         const registry = loadAuditRegistry();
         const record = registry.find(r => normalizeHash(r.hash) === normalizedHash);
 
@@ -192,17 +191,45 @@ export const AuditPortal = {
                 return;
             }
 
-            const dateStr = new Date(record.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            (async () => {
+                let expectedHash = null;
+                let verificationState = 'verified';
+
+                try {
+                    expectedHash = await window.ESGReporter.computeSecureHash({
+                        org: record.org,
+                        role: record.role,
+                        userId: record.userId,
+                        totalKg: record.totalKg,
+                        totalCO2: record.totalCO2,
+                        tokens: record.tokens,
+                        dispatchesCount: record.dispatchesCount,
+                        timestamp: record.timestamp
+                    });
+                    if (normalizeHash(expectedHash) !== normalizeHash(record.hash)) {
+                        verificationState = 'tampered';
+                    }
+                } catch (error) {
+                    console.error('Failed to recompute audit hash:', error);
+                    verificationState = 'tampered';
+                }
+
+                const dateStr = new Date(record.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const statusLabel = verificationState === 'verified' ? 'Verified' : 'Tampered';
+                const statusTone = verificationState === 'verified' ? 'var(--green)' : '#EF4444';
+                const statusBg = verificationState === 'verified' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.08)';
+                const statusBorder = verificationState === 'verified' ? 'var(--green)' : '#EF4444';
             
-            container.innerHTML = `
-                <div class="glass-card fade-in-up" style="padding: 32px; border-color: var(--green); background: rgba(16, 185, 129, 0.05);">
+                container.innerHTML = `
+                <div class="glass-card fade-in-up" style="padding: 32px; border-color: ${statusBorder}; background: ${statusBg};">
                     <div class="between" style="align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
                         <div>
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                                <div style="width: 24px; height: 24px; background: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold;">✓</div>
-                                <h4 style="color: var(--green); font-size: 18px; margin: 0;">Verified Environmental Certificate</h4>
+                                <div style="width: 24px; height: 24px; background: ${statusTone}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold;">${verificationState === 'verified' ? '✓' : '!'}</div>
+                                <h4 style="color: ${statusTone}; font-size: 18px; margin: 0;">${statusLabel} Environmental Certificate</h4>
                             </div>
-                            <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 4px;">Hash: ${record.hash}</div>
+                            <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 4px;">Stored Hash: ${record.hash}</div>
+                            <div style="font-size: 11px; font-family: monospace; color: var(--text-muted); margin-top: 4px;">Expected Hash: ${expectedHash || 'unavailable'}</div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Attested On</div>
@@ -268,15 +295,27 @@ export const AuditPortal = {
                         </div>
 
                         <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
-                            <div style="width: 34px; height: 34px; background: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; border: 3px solid var(--surface-2); color: white;">🔒</div>
+                            <div style="width: 34px; height: 34px; background: ${statusBorder}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; border: 3px solid var(--surface-2); color: white;">🔒</div>
                             <div>
-                                <div style="font-weight: 700; font-size: 14px; color: var(--green);">Cryptographic Signature Minted</div>
-                                <div style="font-size: 12px; color: var(--text-muted);">Verification hash calculated. Safe-state proof finalized in public sustainability database.</div>
+                                <div style="font-weight: 700; font-size: 14px; color: ${statusTone};">${verificationState === 'verified' ? 'Cryptographic Signature Verified' : 'Cryptographic Signature Tampered'}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">${verificationState === 'verified' ? 'Verification hash matches the stored payload digest.' : 'Stored hash does not match the recomputed payload digest, so this record is not trustworthy.'}</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
+                `;
+            })().catch((error) => {
+                console.error('Verification render failed:', error);
+                container.innerHTML = `
+                    <div class="glass-card fade-in-up" style="padding: 32px; border-color: #EF4444; background: rgba(239, 68, 68, 0.05); text-align: center;">
+                        <span style="font-size: 40px; display: block; margin-bottom: 12px;">❌</span>
+                        <h4 style="color: #EF4444; margin-bottom: 8px;">Verification Error</h4>
+                        <p style="font-size: 13px; color: var(--text-muted); max-width: 400px; margin: 0 auto;">
+                            The verifier could not recompute the secure hash for this record. Clear stale local storage data and try again.
+                        </p>
+                    </div>
+                `;
+            });
         }, 1200);
     },
 
