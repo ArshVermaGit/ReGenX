@@ -4393,6 +4393,39 @@ function detectDeviceClass() {
 
 detectDeviceClass();
 window.detectDeviceClass = detectDeviceClass;
+// --- Copy to Clipboard Feature (Issue #78) ---
+
+function copyTagToClipboard(tag) {
+  navigator.clipboard.writeText(tag).then(() => {
+    showToast(`Copied: "${tag}"`);
+  });
+}
+
+function copyAllTags(tags) {
+  const allTags = tags.join(', ');
+  navigator.clipboard.writeText(allTags).then(() => {
+    showToast('All tags copied to clipboard!');
+  });
+}
+
+function exportTagsAsTxt(tags) {
+  const content = tags.join('\n');
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'regenx-tags.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'copy-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 
 // ==========================================
 // DARK MODE TOGGLE LOGIC (ISSUE #79)
