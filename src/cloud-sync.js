@@ -292,10 +292,47 @@ export const CloudSync = {
     /**
      * Pushes a local state change to the Appwrite Database.
      * @param {string} collection - Target collection ID.
-     * @param {Object} document - Data to sync.
+     * @param {Object} payload - Data to sync.
      * @returns {Promise<void>}
      */
     pushDocument: async (collection, payload) => {
+        if (!CloudSync.isLive || !CloudSync.databases || !CloudSync.config) return;
+        
+        CloudSync.renderSyncBadge('syncing', 'Syncing...');
+
+        try {
+            const sanitizedDoc = CloudSync.sanitizeDoc(payload);
+            const { databaseId, ordersCollectionId } = CloudSync.config;
+
+            try {
+                await CloudSync.databases.updateDocument(
+                    databaseId,
+                    ordersCollectionId,
+                    payload.id,
+                    sanitizedDoc
+                );
+                console.log(`☁️ Synced to Appwrite (Updated) -> Collection [${ordersCollectionId}]`, sanitizedDoc);
+            } catch (updateErr) {
+                if (updateErr.code === 404) {
+                    await CloudSync.databases.createDocument(
+                        databaseId,
+                        ordersCollectionId,
+                        payload.id,
+                        sanitizedDoc
+                    );
+                    console.log(`☁️ Synced to Appwrite (Created) -> Collection [${ordersCollectionId}]`, sanitizedDoc);
+                } else {
+                    throw updateErr;
+                }
+            }
+
+            CloudSync.renderSyncBadge('live', 'Cloud Live');
+        } catch (e) {
+            console.error("Failed to sync document to Appwrite:", e);
+            CloudSync.renderSyncBadge('error', 'Sync Error');
+        }
+    },
+
     /**
      * Sanitizes an account object for Appwrite storage.
      * @param {Object} account - Raw account object.
@@ -490,43 +527,6 @@ export const CloudSync = {
             window.refreshCurrentView?.(true);
         } catch (e) {
             console.error('[CloudSync] hydrateFromCloud failed:', e);
-            CloudSync.renderSyncBadge('error', 'Sync Error');
-        }
-    },
-    pushDocument: async (collection, document) => {
-        if (!CloudSync.isLive || !CloudSync.databases || !CloudSync.config) return;
-        
-        CloudSync.renderSyncBadge('syncing', 'Syncing...');
-
-        try {
-            const sanitizedDoc = CloudSync.sanitizeDoc(payload);
-            const { databaseId, ordersCollectionId } = CloudSync.config;
-
-            try {
-                await CloudSync.databases.updateDocument(
-                    databaseId,
-                    ordersCollectionId,
-                    payload.id,
-                    sanitizedDoc
-                );
-                console.log(`☁️ Synced to Appwrite (Updated) -> Collection [${ordersCollectionId}]`, sanitizedDoc);
-            } catch (updateErr) {
-                if (updateErr.code === 404) {
-                    await CloudSync.databases.createDocument(
-                        databaseId,
-                        ordersCollectionId,
-                        payload.id,
-                        sanitizedDoc
-                    );
-                    console.log(`☁️ Synced to Appwrite (Created) -> Collection [${ordersCollectionId}]`, sanitizedDoc);
-                } else {
-                    throw updateErr;
-                }
-            }
-
-            CloudSync.renderSyncBadge('live', 'Cloud Live');
-        } catch (e) {
-            console.error("Failed to sync document to Appwrite:", e);
             CloudSync.renderSyncBadge('error', 'Sync Error');
         }
     }
