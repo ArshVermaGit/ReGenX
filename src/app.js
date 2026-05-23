@@ -3386,7 +3386,7 @@ window.openScanner = function() {
       }, 200);
     },
     onScanSaved: (record) => {
-      console.log('IoT Scan Saved:', record);
+
     }
   });
   document.getElementById('modal').classList.add('open');
