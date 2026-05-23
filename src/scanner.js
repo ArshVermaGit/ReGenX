@@ -49,29 +49,31 @@ window.BioScanner = (function () {
   let _opts = {};
   let _stream = null;
   let _model = null;
-  let _modelLoading = false;
+  let _modelPromise = null;
   let _scanHistory = [];
   let _currentResult = null;
 
   // ── MODEL LOADING ─────────────────────────────────────────────────────────────
   async function loadModel() {
     if (_model) return _model;
-    if (_modelLoading) {
-      // Poll until ready
-      return new Promise(resolve => {
-        const check = setInterval(() => {
-          if (_model) { clearInterval(check); resolve(_model); }
-        }, 200);
+    if (_modelPromise) {
+      return _modelPromise;
+    }
+
+    _modelPromise = window.mobilenet.load()
+      .then((model) => {
+        _model = model;
+        return model;
+      })
+      .catch((error) => {
+        _model = null;
+        throw error;
+      })
+      .finally(() => {
+        _modelPromise = null;
       });
-    }
-    _modelLoading = true;
-    try {
-      _model = await window.mobilenet.load();
-    } catch (e) {
-      _model = null;
-    }
-    _modelLoading = false;
-    return _model;
+
+    return _modelPromise;
   }
 
   // ── CLASSIFICATION ENGINE ─────────────────────────────────────────────────────
@@ -541,7 +543,7 @@ window.BioScanner = (function () {
     });
 
     // Pre-load AI model silently
-    loadModel();
+    loadModel().catch(() => null);
   }
 
   // ── CAPTURE FROM CAMERA ───────────────────────────────────────────────────────
