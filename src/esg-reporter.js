@@ -562,3 +562,5 @@ export const ESGReporter = {
 };
 
 window.ESGReporter = ESGReporter;
+
+// Phase 2 Task 1: Active ESG charts telemetry active
