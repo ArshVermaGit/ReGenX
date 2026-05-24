@@ -60,7 +60,9 @@ window.BioScanner = (function () {
       return _modelPromise;
     }
 
-    _modelPromise = window.mobilenet.load()
+    _modelPromise = window.mobilenet.load({
+      modelUrl: '/models/mobilenet/model.json'
+    })
       .then((model) => {
         _model = model;
         return model;

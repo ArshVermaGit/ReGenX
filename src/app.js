@@ -20,6 +20,8 @@ const QUALITY_LEDGER_KEY = STORAGE_KEY_PREFIX + "quality-ledger";
 const AUTOMATION_PIPELINE_KEY = STORAGE_KEY_PREFIX + "automation-pipeline";
 const SESSION_STATE_KEY = STORAGE_KEY_PREFIX + 'active-session';
 
+console.log('APP JS LOADED');
+
 function saveActiveSession(accountId, viewId) {
   try {
     const payload = { accountId, lastView: viewId || '', timestamp: Date.now() };
@@ -5187,3 +5189,15 @@ document.addEventListener('DOMContentLoaded', () => {
         window.AccessibilityManager.init();
     }
 });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+
+      console.log('Service Worker registered:', registration.scope);
+    } catch (error) {
+      console.error('Service Worker registration failed:', error);
+    }
+  });
+}

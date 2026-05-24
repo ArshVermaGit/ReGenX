@@ -4,7 +4,7 @@
 // Supports: Offline fallback, Background Sync, Push Notifications
 // ══════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'regenx-v6';
+const CACHE_VERSION = 'regenx-v7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const SYNC_TAG = 'regenx-order-sync';
@@ -29,7 +29,13 @@ const STATIC_ASSETS = [
   '/src/i18n.js',
   '/icons/icon-72x72.png',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  '/models/mobilenet/model.json',
+  '/models/mobilenet/group1-shard1of5.bin',
+  '/models/mobilenet/group1-shard2of5.bin',
+  '/models/mobilenet/group1-shard3of5.bin',
+  '/models/mobilenet/group1-shard4of5.bin',
+  '/models/mobilenet/group1-shard5of5.bin'
 ];
 
 const STATIC_ASSET_PATHS = new Set(STATIC_ASSETS.map((asset) => new URL(asset, self.location.origin).pathname));
