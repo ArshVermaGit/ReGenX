@@ -1,6 +1,7 @@
 /**
  * @fileoverview ReGenX Enterprise ESG Reporting Engine
  * Generates high-fidelity HTML-to-PDF reports for Corporate Social Responsibility metrics.
+ * Phase 2 Upgrade: Optimized ESG coefficient algorithms and modular reporting formats.
  * @author GSSoC Contributor
  */
 
