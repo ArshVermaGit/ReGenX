@@ -1,6 +1,7 @@
 /**
  * @fileoverview ReGenX Trust Protocol Module
  * Handles decentralized identity (DID), trust scoring, and reward scaling.
+ * Phase 2 Upgrade: Enhanced SHA-256 trust ledger security validations.
  * @author GSSoC Contributor
  */
 
