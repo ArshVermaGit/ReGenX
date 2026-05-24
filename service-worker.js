@@ -209,14 +209,21 @@ self.addEventListener('sync', (event) => {
  * @returns {Promise<void>}
  */
 async function replayQueuedOrders() {
-  const clients = await self.clients.matchAll({ type: 'window' });
+  try {
+    // Notify all open clients to trigger offline sync
+    const clients = await self.clients.matchAll({ type: 'window' });
 
-  clients.forEach((client) => {
-    client.postMessage({
-      type: 'SYNC_COMPLETE',
-      message: '☁️ Back online! Queued orders have been synced to the cloud.'
+    clients.forEach((client) => {
+      client.postMessage({
+        type: 'SYNC_COMPLETE',
+        message: '☁️ Back online! Queued orders have been synced to the cloud.'
+      });
     });
-  });
+
+    console.log('[SW] Background sync triggered — offline queue notified');
+  } catch (error) {
+    console.error('[SW] Background sync failed:', error);
+  }
 }
 
 self.addEventListener('push', (event) => {
