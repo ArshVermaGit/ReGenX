@@ -267,13 +267,14 @@ export const AccessibilityManager = {
     /**
      * Speaks the given text using the speech synthesis API.
      * @param {string} text - The text to read out.
+     * @param {number} [rate=1.0] - The speech rate scaling factor.
      */
-    speak: (text) => {
+    speak: (text, rate = 1.0) => {
         if (!window.speechSynthesis) return;
         AccessibilityManager.stopSpeaking();
 
         AccessibilityManager.utterance = new SpeechSynthesisUtterance(text);
-        AccessibilityManager.utterance.rate = 1.0;
+        AccessibilityManager.utterance.rate = rate;
         window.speechSynthesis.speak(AccessibilityManager.utterance);
     },
 
