@@ -92,17 +92,33 @@ function joinCurrentSession() {
 function connectSocket() {
   if (socket || typeof window.io !== 'function') return;
 
-  const config = window.__REALTIME_CONFIG__ || {};
   const opts = {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: Infinity,
-    timeout: 8000
+    timeout: 8000,
+    auth: (cb) => {
+      if (!session || !session.id) {
+        cb(new Error("No session available"));
+        return;
+      }
+      fetch('/api/auth/socket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) cb({ token: data.token });
+        else cb(new Error("No token returned"));
+      })
+      .catch(err => {
+        console.error('Socket auth fetch error', err);
+        cb(err);
+      });
+    }
   };
-  if (config.token) {
-    opts.auth = { token: config.token };
-  }
 
   socket = window.io(window.location.origin, opts);
 
@@ -110,6 +126,11 @@ function connectSocket() {
     connected = true;
     updateConnectionBadge('connected');
     joinCurrentSession();
+  });
+
+  socket.on('connect_error', (err) => {
+    console.warn('Socket connect error:', err.message);
+    updateConnectionBadge('offline', 'Auth Failed');
   });
 
   socket.on('disconnect', () => {
@@ -182,9 +203,7 @@ export const ReGenXRealtime = {
   init() {
     if (typeof window === 'undefined') return;
     this.renderBadge();
-    connectSocket();
     setupFallbackChannel();
-    updateConnectionBadge(socket?.connected ? 'connected' : 'offline');
   },
 
   renderBadge() {
@@ -207,11 +226,16 @@ export const ReGenXRealtime = {
 
   setSession(nextSession) {
     session = nextSession || null;
-    if (session && socket?.connected) {
-      joinCurrentSession();
+    if (session) {
+      if (!socket) {
+        connectSocket();
+      } else {
+        socket.connect(); // Force reconnect to acquire new token if auth failed
+        joinCurrentSession();
+      }
     }
     if (!session && socket) {
-      socket.emit('session:leave', { clientId });
+      socket.disconnect();
     }
   },
 

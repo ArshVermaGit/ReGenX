@@ -14,8 +14,9 @@
     "test": "npm run test:pwa && npm run test:modules && npm run test:health"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.22.2",
-    "socket.io": "^4.8.3",
-    "dotenv": "^17.4.2"
+    "jsonwebtoken": "^9.0.3",
+    "socket.io": "^4.8.3"
   }
 }

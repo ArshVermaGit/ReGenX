@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ function isAllowedOrigin(origin) {
 }
 
 const app = express();
+app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -59,12 +61,18 @@ io.use((socket, next) => {
     socket.handshake?.auth?.token ||
     socket.handshake?.headers?.['x-realtime-token'];
 
-  if (authToken !== REALTIME_AUTH_TOKEN) {
-    next(new Error('Unauthorized realtime connection'));
+  if (!authToken) {
+    next(new Error('Unauthorized realtime connection: no token provided'));
     return;
   }
 
-  next();
+  try {
+    const decoded = jwt.verify(authToken, REALTIME_AUTH_TOKEN);
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Unauthorized realtime connection: invalid token'));
+  }
 });
 
 const initialState = {
@@ -115,9 +123,17 @@ function applyUpdates(updates = []) {
 
 app.use(express.static(rootDir, { extensions: ['html'] }));
 
-app.get('/config.js', (_req, res) => {
-  res.type('application/javascript');
-  res.send(`window.__REALTIME_CONFIG__ = ${JSON.stringify({ token: REALTIME_AUTH_TOKEN })};`);
+app.post('/api/auth/socket', (req, res) => {
+  const { session } = req.body;
+  if (!session || !session.id || !session.role) {
+    return res.status(400).json({ error: 'Invalid session payload' });
+  }
+  const token = jwt.sign(
+    { id: session.id, role: session.role },
+    REALTIME_AUTH_TOKEN,
+    { expiresIn: '12h' }
+  );
+  res.json({ token });
 });
 
 app.get('/healthz', (_req, res) => {
@@ -146,6 +162,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('operational:event', async (payload = {}) => {
+    const userRole = socket.user?.role;
+    
+    // RBAC: Ensure only privileged roles can perform state modifications
+    if (!userRole || userRole === 'user' || userRole === 'guest') {
+      console.warn(`Unauthorized state modification attempt by user: ${socket.user?.id}`);
+      return;
+    }
+
     const updates = Array.isArray(payload.updates) ? payload.updates : [];
     if (!updates.length) {
       broadcastToRooms({
