@@ -74,7 +74,7 @@ export const CloudSync = {
                     }
                 }
             } else {
-                console.warn("Could not load /.env file, status:", response.status);
+                console.warn("[CloudSync] Standard configuration could not load /.env file, status:", response.status);
             }
         } catch (e) {
             console.warn("Failed to fetch or parse .env file. Falling back to defaults.", e);
