@@ -384,7 +384,7 @@ function pushActivityFeed(event) {
   const item = document.createElement('div');
   item.className = 'gw-item';
   item.innerHTML = `
-    <div>${event.icon || '🔔'} ${event.title}</div>
+    <div>${event.icon || '🔔'} ${escapeHTML(event.title)}</div>
     <div class="gw-time">${fmtDate(event.ts || Date.now())}</div>
   `;
   const first = feed.firstChild;
@@ -447,13 +447,13 @@ function renderNotificationCenter() {
   list.innerHTML = notifications.map(n => `
     <div class="notification-card ${n.read ? 'read' : 'unread'}">
       <div class="notification-card-header">
-        <div class="notification-card-title">${n.title}</div>
+        <div class="notification-card-title">${escapeHTML(n.title)}</div>
         <div class="notification-card-meta">${fmtDate(n.ts)}</div>
       </div>
-      <div class="notification-card-body">${n.body}</div>
+      <div class="notification-card-body">${escapeHTML(n.body)}</div>
       <div class="notification-card-actions">
-        <button class="btn btn-ghost btn-sm" onclick="markNotificationRead('${n.id}')">Mark read</button>
-        <button class="btn btn-ghost btn-sm" onclick="window.location.href='${n.url}'">View</button>
+        <button class="btn btn-ghost btn-sm" onclick="markNotificationRead('${escapeHTML(n.id)}')">Mark read</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.location.href='${escapeHTML(n.url)}'">View</button>
       </div>
     </div>
   `).join('');
@@ -4284,7 +4284,7 @@ window.openIntegrityScan = function(orderId) {
             <div class="trust-tl-icon">${meta.icon}</div>
             <div>
               <div class="trust-tl-title">${meta.label}</div>
-              <div class="trust-tl-sub">${fmtDate(e.ts)} · ${e.actorRole.toUpperCase()}</div>
+              <div class="trust-tl-sub">${fmtDate(e.ts)} · ${escapeHTML(e.actorRole).toUpperCase()}</div>
             </div>
             ${idx < events.length - 1 ? '<div class="trust-tl-line"></div>' : ''}
           </div>
@@ -4337,7 +4337,7 @@ window.openSettings = function() {
       <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Entity</div>
       <div style="font-weight:600; margin-bottom:12px;">${escapeHTML(SESSION.org)}</div>
       <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Role</div>
-      <div style="font-weight:600;">${SESSION.role.toUpperCase()}</div>
+      <div style="font-weight:600;">${escapeHTML(SESSION.role).toUpperCase()}</div>
     </div>
     
     <div class="modal-actions" style="justify-content: space-between;">
@@ -4533,7 +4533,7 @@ async function renderPlant(mc, fullRender) {
                </div>
             </div>
             <div style="font-size:13px; background:rgba(255,255,255,0.5); padding:12px; border-radius:8px; border-left:4px solid var(--blue);">
-               <strong>AI Recommendation:</strong> ${yieldPrediction.recommendation}
+               <strong>AI Recommendation:</strong> ${escapeHTML(yieldPrediction.recommendation)}
             </div>
           </div>
         `;
@@ -5068,7 +5068,7 @@ function renderIoT(mc, fullRender) {
     ${alerts.length ? `
     <div class="iot-global-alert glass-card" style="margin-bottom:24px; border-color:var(--red); background:var(--red-light); padding:16px;">
       <div style="font-weight:700; color:var(--red); margin-bottom:4px;">⚠️ ${alerts.length} bin${alerts.length > 1 ? 's require' : ' requires'} immediate attention</div>
-      <div style="font-size:13px; color:var(--text-muted);">${alerts.map(b => b.name).join(', ')}</div>
+      <div style="font-size:13px; color:var(--text-muted);">${alerts.map(b => escapeHTML(b.name)).join(', ')}</div>
     </div>` : ''}
 
     <!-- Bin Cards Grid -->

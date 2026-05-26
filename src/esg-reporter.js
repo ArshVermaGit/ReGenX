@@ -194,7 +194,7 @@ export const ESGReporter = {
                                 return `
                                     <div style="background:var(--surface-hover); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px;">
                                         <div class="between" style="margin-bottom:6px;">
-                                            <span style="font-weight:700; font-size:13px;">${o.wasteType}</span>
+                                            <span style="font-weight:700; font-size:13px;">${window.escapeHTML(o.wasteType)}</span>
                                             <span class="badge ${score >= 75 ? 'badge-green' : 'badge-amber'}" style="font-size:10px;">${score}% Quality</span>
                                         </div>
                                         <div class="between" style="font-size:11px; color:var(--text-muted);">
@@ -235,9 +235,9 @@ export const ESGReporter = {
                                 <div style="margin-bottom:24px; padding:16px; border-left:4px solid #0D9488; background:#F8FAFC; border-radius:0 8px 8px 0;">
                                     <h3 style="margin:0 0 8px 0; color:#0F172A; font-size:14px; font-family:'Space Grotesk',sans-serif;">Entity Profile</h3>
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:12px;">
-                                        <div><strong>Organization/Facility:</strong> ${account.org || account.name}</div>
-                                        <div><strong>Network Identifier:</strong> ${account.id || 'N/A'}</div>
-                                        <div><strong>Assigned Protocol Role:</strong> ${account.role ? account.role.toUpperCase() : 'USER'}</div>
+                                        <div><strong>Organization/Facility:</strong> ${window.escapeHTML(account.org || account.name)}</div>
+                                        <div><strong>Network Identifier:</strong> ${window.escapeHTML(account.id || 'N/A')}</div>
+                                        <div><strong>Assigned Protocol Role:</strong> ${window.escapeHTML(account.role ? account.role.toUpperCase() : 'USER')}</div>
                                         <div><strong>Attestation Node Status:</strong> Verified & Active</div>
                                     </div>
                                 </div>
@@ -272,7 +272,7 @@ export const ESGReporter = {
                                         ${history.length ? history.slice(0, 4).map(o => `
                                             <tr>
                                                 <td>${new Date(o.ts).toLocaleDateString('en-US', {month:'short',day:'numeric'})}</td>
-                                                <td>${o.wasteType.split(' ')[0]}</td>
+                                                <td>${window.escapeHTML(o.wasteType.split(' ')[0])}</td>
                                                 <td>${o.actualKg || o.kg} kg</td>
                                                 <td><strong>${o.segScore || (o.quality === 'Good (Segregated)' ? 85 : 45)}%</strong></td>
                                             </tr>
@@ -446,13 +446,13 @@ export const ESGReporter = {
                 <table style="width:100%; font-size:12px; border-collapse:collapse;">
                     <tr>
                         <td style="padding:6px 0; color:#64748B; width:30%;"><strong>Organization Name:</strong></td>
-                        <td style="padding:6px 0; color:#0F172A;">${account.org || account.name}</td>
+                        <td style="padding:6px 0; color:#0F172A;">${window.escapeHTML(account.org || account.name)}</td>
                         <td style="padding:6px 0; color:#64748B; width:25%;"><strong>Registry Role:</strong></td>
-                        <td style="padding:6px 0; color:#0F172A; text-transform:uppercase;">${account.role ? account.role.toUpperCase() : 'USER'}</td>
+                        <td style="padding:6px 0; color:#0F172A; text-transform:uppercase;">${window.escapeHTML(account.role ? account.role.toUpperCase() : 'USER')}</td>
                     </tr>
                     <tr>
                         <td style="padding:6px 0; color:#64748B;"><strong>Network node ID:</strong></td>
-                        <td style="padding:6px 0; color:#0F172A; font-family:monospace;">${account.id || 'N/A'}</td>
+                        <td style="padding:6px 0; color:#0F172A; font-family:monospace;">${window.escapeHTML(account.id || 'N/A')}</td>
                         <td style="padding:6px 0; color:#64748B;"><strong>Compliance status:</strong></td>
                         <td style="padding:6px 0; color:#16A34A; font-weight:700;">CERTIFIED COMPLIANT</td>
                     </tr>
@@ -499,7 +499,7 @@ export const ESGReporter = {
                         return `
                             <tr>
                                 <td style="padding:12px; font-size:12px; color:#334155; border-bottom:1px solid #F1F5F9;">${new Date(o.ts).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})}</td>
-                                <td style="padding:12px; font-size:12px; color:#334155; border-bottom:1px solid #F1F5F9;">${o.wasteType}</td>
+                                <td style="padding:12px; font-size:12px; color:#334155; border-bottom:1px solid #F1F5F9;">${window.escapeHTML(o.wasteType)}</td>
                                 <td style="padding:12px; font-size:12px; color:#334155; border-bottom:1px solid #F1F5F9; text-align:right; font-weight:600;">${o.actualKg || o.kg} kg</td>
                                 <td style="padding:12px; font-size:12px; color:#334155; border-bottom:1px solid #F1F5F9; text-align:right; font-weight:700; color:${s >= 75 ? '#16A34A' : '#D97706'}">${s}%</td>
                                 <td style="padding:12px; font-size:10px; color:#64748B; font-family:monospace; border-bottom:1px solid #F1F5F9; padding-left:24px;">${h.slice(0, 24)}...</td>
@@ -526,7 +526,7 @@ export const ESGReporter = {
                 <tbody>
                     ${co2Details.map(d => `
                     <tr>
-                        <td style="padding:8px; border:1px solid #E2E8F0;">${d.wasteType}</td>
+                        <td style="padding:8px; border:1px solid #E2E8F0;">${window.escapeHTML(d.wasteType)}</td>
                         <td style="padding:8px; text-align:right; border:1px solid #E2E8F0;">${d.kg.toFixed(1)}</td>
                         <td style="padding:8px; text-align:right; border:1px solid #E2E8F0;">${d.factor.toFixed(2)}</td>
                         <td style="padding:8px; text-align:right; border:1px solid #E2E8F0;">${d.co2.toFixed(1)}</td>

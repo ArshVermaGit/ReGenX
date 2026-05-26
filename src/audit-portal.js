@@ -257,7 +257,7 @@ export const AuditPortal = {
                         <span style="font-size: 40px; display: block; margin-bottom: 12px;">❌</span>
                         <h4 style="color: #EF4444; margin-bottom: 8px;">Verification Failed</h4>
                         <p style="font-size: 13px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.5;">
-                            The identifier or signature hash <strong>${queryStr}</strong> was not found in the ReGenX ledger. This record may be unverified, modified, or not yet completed.
+                            The identifier or signature hash <strong>${escapeHTML(queryStr)}</strong> was not found in the ReGenX ledger. This record may be unverified, modified, or not yet completed.
                         </p>
                     </div>
                 `;
